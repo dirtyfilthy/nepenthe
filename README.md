@@ -38,13 +38,28 @@ After installing, the settings page opens. Nepenthe stays **off** until you tick
 
 These are limits of what Firefox lets extensions do:
 
-- **Form and search-bar history.** There's no per-site or by-age API for it. Turn off Settings → Privacy → History → "Remember search and form history".
+- **Search and form history.** This is what you've typed into search boxes and web forms. Firefox offers extensions no way to delete it by site or by age, so stop Firefox saving it (see [Turn off search and form history](#turn-off-search-and-form-history)).
 - **Site permissions and per-site settings,** such as notifications, camera, zoom and cookie exceptions, plus **HSTS records.** Extensions can't reach these.
 - **Bookmarks and saved passwords.** These are kept on purpose. A bookmarked page loses its visits but the bookmark stays.
 - **Clearing one site's cache.** Firefox's per-site cache clearing silently does nothing, because network partitioning (on by default) stores every cache entry under the top-level site and the per-site delete doesn't match those entries. So whenever a site expires, Nepenthe clears the whole HTTP cache. Pages load a little slower until the cache refills, but no cached file outlives its site.
 - **Storage that third-party iframes kept under a stale site.** Their cookies are deleted, but their localStorage and IndexedDB can't be targeted. Data with no cookie and no history entry is invisible to extensions.
 - **Firefox Sync.** Other devices keep whatever they already synced.
 - **If Firefox is set to "Never remember history",** no site ever counts as active, so every site not open in a tab loses its cookies on each run. The preview warns about this.
+
+## Turn off search and form history
+
+Nepenthe can't expire what you type into search boxes and web forms, so turn it off in Firefox instead. Keep browsing history on, because Nepenthe uses it to tell which sites you still visit.
+
+1. Open Firefox Settings (`about:preferences`) and go to **Privacy & Security**.
+2. Under **History**, choose **Customize history**.
+3. Click **Choose what you want Firefox to remember**.
+4. Untick **Remember search and form history**. Leave **Remember browsing and download history** ticked.
+
+Older Firefox versions show a "Firefox will" menu instead: set it to **Use custom settings for history**, then untick **Remember search and form history**.
+
+On any version, you can instead set `browser.formfill.enable` to `false` in `about:config`.
+
+Turning it off stops Firefox saving new entries. It doesn't erase what's already saved.
 
 ## Development
 
