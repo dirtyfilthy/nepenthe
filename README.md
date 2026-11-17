@@ -66,8 +66,11 @@ Turning it off stops Firefox saving new entries. It doesn't erase what's already
 ```bash
 npm test                    # unit tests (fake browser API)
 npm run e2e                 # real headless Firefox, ~90s; FIREFOX=/path/to/firefox to override
+npm run publish             # submit the last commit to addons.mozilla.org as a public listing (needs the API keys, see Install)
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
 ```
+
+`npm run publish` uploads the extension plus a zip of the source from git, since reviewers need the source of the generated `src/psl-data.js`. The store listing text comes from `amo-metadata.json` on the first public submission only; after that, edit the listing on addons.mozilla.org. Each submission needs a new `version` in `manifest.json`.
 
 Layout:
 - `src/sweep.js`: decides what is stale and deletes it.

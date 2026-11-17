@@ -1,0 +1,17 @@
+{
+  "categories": { "firefox": ["privacy-security"] },
+  "tags": ["privacy", "security"],
+  "summary": {
+    "en-US": "Disappearing messages, but for Firefox. History, cookies, cache and site data for sites you haven't visited in a time you choose are deleted automatically."
+  },
+  "description": {
+    "en-US": "Think disappearing messages, but for Firefox. You pick a time limit (hours, days or weeks), and anything older quietly disappears:\n\n- **History:** every visit older than the limit, even on sites you still use.\n- **Cookies:** every cookie of a site you haven't visited within the limit, in every container, including third-party cookies set while you were on it.\n- **Site data:** local storage, IndexedDB and service workers of those sites, plus the browser cache.\n- **Downloads list and recently closed tabs:** entries older than the limit. Downloaded files stay on disk.\n\nSites you still visit, or have open in a tab, keep their cookies so you stay signed in. A keep list protects sites you want to stay signed in to even when you rarely visit them.\n\n**Why another history cleaner?** I tried other tools and none of them worked properly, so I wrote this one. Deleting history, cookies, site storage, cache and form history is tested against a real copy of Firefox, not just assumed to work. That testing turned up the fact that Firefox's own per-site cache clearing silently does nothing, so Nepenthe clears the whole cache when a site expires rather than leaving cached files behind.\n\n**Safe to install:** it starts switched off. Pick your limit on the settings page, and before the first run it shows exactly what will be deleted and asks you to confirm. Nepenthe keeps no record of the sites you visit and sends nothing anywhere.\n\n**Limits:** Firefox doesn't let extensions delete search and form history by age, so the settings page shows how to turn it off and has a button to clear what's already saved. Site permissions, bookmarks and saved passwords are left alone.\n\nOpen source (MIT): https://github.com/dirtyfilthy/nepenthe"
+  },
+  "homepage": { "en-US": "https://github.com/dirtyfilthy/nepenthe" },
+  "version": {
+    "license": "MIT",
+    "release_notes": {
+      "en-US": "First public release on addons.mozilla.org."
+    }
+  }
+}
