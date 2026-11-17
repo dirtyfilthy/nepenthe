@@ -42,6 +42,11 @@
       <label><input type="checkbox" id="downloads"> Download list entries older than the limit <small>(files stay on disk)</small></label>
       <label><input type="checkbox" id="closedTabs"> Recently closed tabs and windows older than the limit</label>
       <p class="hint note">Not covered: search and form history (what you type into search boxes and forms). Firefox gives extensions no way to delete it by age, so turn it off in Firefox Settings → Privacy &amp; Security → History → <b>Customize history</b> → <b>Choose what you want Firefox to remember</b>, then untick <b>Remember search and form history</b>. Leave browsing history on, because Nepenthe needs it.</p>
+      <p class="hint note">Turning it off doesn't erase what's already saved. This button does, all of it at once. Saved passwords, addresses and cards aren't touched.</p>
+      <div class="actions">
+        <button id="clearForms" type="button" class="danger">Clear all saved search and form history</button>
+        <span id="clearFormsStatus" class="muted" aria-live="polite"></span>
+      </div>
     </section>
 
     <section>

@@ -127,6 +127,22 @@ $("sweep").addEventListener("click", async () => {
   }
 });
 
+$("clearForms").addEventListener("click", async () => {
+  if (!confirm("Delete everything Firefox has saved from search boxes and web forms? This can't be undone.")) return;
+  const btn = $("clearForms");
+  const status = $("clearFormsStatus");
+  btn.disabled = true;
+  try {
+    // No "since": removes all form history. Firefox can't remove entries by age.
+    await browser.browsingData.removeFormData({});
+    status.textContent = "Cleared.";
+  } catch (e) {
+    status.textContent = `Couldn't clear it: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 $("grant").addEventListener("click", async () => {
   await browser.permissions.request(ALL_URLS);
   checkPermission();

@@ -59,7 +59,7 @@ Older Firefox versions show a "Firefox will" menu instead: set it to **Use custo
 
 On any version, you can instead set `browser.formfill.enable` to `false` in `about:config`.
 
-Turning it off stops Firefox saving new entries. It doesn't erase what's already saved.
+Turning it off stops Firefox saving new entries. It doesn't erase what's already saved. To erase that, click **Clear all saved search and form history** on Nepenthe's settings page. It removes every entry at once, because Firefox can't remove them by age. Saved passwords, addresses and cards aren't touched.
 
 ## Development
 

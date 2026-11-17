@@ -2,9 +2,9 @@
 // Uses a throwaway profile, local test sites (*.test mapped to 127.0.0.1) and a
 // 1-minute limit, so it takes about 90 seconds.
 // Usage: FIREFOX=/path/to/firefox node test/e2e.mjs
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,6 +34,10 @@ const server = createServer((req, res) => {
     assetHits[host] = (assetHits[host] || 0) + 1;
     res.writeHead(200, { "content-type": "text/javascript", "cache-control": "public, max-age=86400" });
     return res.end("/* cached asset */");
+  }
+  if (req.url === "/form") {
+    res.writeHead(200, { "content-type": "text/html" });
+    return res.end(`<!doctype html><form action="/check"><input name="q"></form>`);
   }
   const headers = { "content-type": "text/html" };
   if (req.url === "/") headers["set-cookie"] = "sid=1; Max-Age=86400; Path=/";
@@ -127,6 +131,21 @@ async function inspect(name) {
   return r;
 }
 
+// Counts saved form history by reading a copy of the profile's database.
+function formHistoryCount() {
+  const dir = mkdtempSync(join(tmpdir(), "nepenthe-fh-"));
+  for (const f of ["formhistory.sqlite", "formhistory.sqlite-wal"]) {
+    try { copyFileSync(join(profile, f), join(dir, f)); } catch {}
+  }
+  try {
+    return Number(execFileSync("sqlite3", [join(dir, "formhistory.sqlite"), "select count(*) from moz_formhistory"], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim());
+  } catch {
+    return 0; // no database yet means nothing saved
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 try {
   await send("session.new", { capabilities: {} });
   const { extension } = await send("webExtension.install", { extensionData: { type: "path", path: EXT_DIR } });
@@ -142,6 +161,29 @@ try {
   }
   assert.ok(opt, "options page should open on install");
   await evalIn(opt, `browser.storage.local.set({ settings: { enabled: false, amount: 1, unit: "minutes" } })`);
+
+  log("clear-form-history button");
+  // Submitting a form makes Firefox save what was typed, like a real search.
+  const formTab = await newTab(site("fresh", "/form"));
+  await evalIn(formTab, `document.querySelector("input").focus()`);
+  const keys = [..."nepenthe test"].flatMap((value) => [{ type: "keyDown", value }, { type: "keyUp", value }]);
+  keys.push({ type: "keyDown", value: "\uE007" }, { type: "keyUp", value: "\uE007" }); // Enter submits
+  await send("input.performActions", { context: formTab, actions: [{ type: "key", id: "kbd", actions: keys }] });
+  let saved = 0;
+  for (let i = 0; i < 50 && !saved; i++) { await sleep(200); saved = formHistoryCount(); }
+  assert.ok(saved > 0, "form history saved");
+  await send("browsingContext.close", { context: formTab });
+  // BiDi can't answer dialogs on extension pages, so stand in for confirm(): record it and say OK.
+  await evalIn(opt, `(window.confirmed = [], window.confirm = (m) => (window.confirmed.push(m), true), true)`);
+  await evalIn(opt, `document.getElementById("clearForms").click()`);
+  const [message] = await evalIn(opt, `window.confirmed`);
+  assert.match(message, /search boxes and web forms/);
+  let status = "";
+  for (let i = 0; i < 50 && !status; i++) { await sleep(100); status = await evalIn(opt, `document.getElementById("clearFormsStatus").textContent`); }
+  assert.equal(status, "Cleared.");
+  let left = saved;
+  for (let i = 0; i < 25 && left; i++) { await sleep(200); left = formHistoryCount(); }
+  assert.equal(left, 0, "form history cleared");
 
   log("visiting old.test (then closing it) and open.test (left open)");
   await send("browsingContext.close", { context: await visit("old") });
