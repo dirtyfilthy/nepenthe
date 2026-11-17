@@ -1,0 +1,5 @@
+node_modules/
+web-ext-artifacts/
+nepenthe.zip
+.amo-upload-uuid
+.DS_Store

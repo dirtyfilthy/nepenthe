@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nepenthe</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+<main>
+  <h1>Nepenthe</h1>
+  <p class="lede">Browsing that disappears. Anything older than the limit is deleted, and so is every trace of a site you haven't visited within it.</p>
+
+  <div id="perm-warning" class="banner warn" hidden>
+    Nepenthe needs access to all sites to find and delete their cookies.
+    <button id="grant" type="button">Grant access</button>
+  </div>
+
+  <form id="form">
+    <section>
+      <label class="switch">
+        <input type="checkbox" id="enabled">
+        <span>Automatically delete</span>
+      </label>
+      <div class="row">
+        <span>Disappear after</span>
+        <input type="number" id="amount" min="1" step="1" required>
+        <select id="unit">
+          <option value="minutes">minutes</option>
+          <option value="hours">hours</option>
+          <option value="days">days</option>
+          <option value="weeks">weeks</option>
+        </select>
+      </div>
+    </section>
+
+    <section>
+      <h2>What disappears</h2>
+      <label><input type="checkbox" id="history"> History visits older than the limit <small>(even on sites you still use)</small></label>
+      <label><input type="checkbox" id="cookies"> Cookies of sites not visited within the limit</label>
+      <label><input type="checkbox" id="siteData"> Local storage, IndexedDB and service workers of those sites, and the browser cache <small>(Firefox can only clear all of it at once)</small></label>
+      <label><input type="checkbox" id="downloads"> Download list entries older than the limit <small>(files stay on disk)</small></label>
+      <label><input type="checkbox" id="closedTabs"> Recently closed tabs and windows older than the limit</label>
+    </section>
+
+    <section>
+      <h2>Keep these sites</h2>
+      <p class="hint">One per line. Cookies and site data for these sites never expire, so you stay signed in. Their history still disappears.</p>
+      <textarea id="keepSites" rows="5" spellcheck="false" placeholder="mail.example.com"></textarea>
+    </section>
+
+    <div class="actions">
+      <button type="submit" class="primary">Save</button>
+      <span id="saved" class="muted" aria-live="polite"></span>
+    </div>
+  </form>
+
+  <section>
+    <h2>Now</h2>
+    <p id="status" class="muted">Loading…</p>
+    <div class="actions">
+      <button id="preview" type="button">Preview</button>
+      <button id="sweep" type="button" class="danger">Delete expired now</button>
+    </div>
+    <div id="preview-out" hidden>
+      <p id="preview-summary"></p>
+      <p id="preview-warn" class="banner warn" hidden></p>
+      <ul id="preview-list"></ul>
+    </div>
+  </section>
+</main>
+<script src="../src/psl-data.js"></script>
+<script src="../src/domain.js"></script>
+<script src="../src/settings.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

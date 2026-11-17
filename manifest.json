@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Nepenthe",
+  "version": "0.1.1",
+  "description": "Disappearing history for Firefox: history, cookies, cache and site data for sites you haven't visited in a set time are deleted automatically.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "nepenthe-d9ac2c74@extension",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  },
+  "permissions": [
+    "alarms",
+    "browsingData",
+    "cookies",
+    "downloads",
+    "history",
+    "sessions",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "scripts": ["src/psl-data.js", "src/domain.js", "src/settings.js", "src/sweep.js", "src/background.js"]
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Nepenthe settings",
+    "default_icon": "icons/icon.svg"
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  }
+}

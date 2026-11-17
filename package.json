@@ -1,0 +1,14 @@
+{
+  "name": "nepenthe",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Disappearing browsing history for Firefox",
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "e2e": "node test/e2e.mjs",
+    "build-psl": "node tools/build-psl.mjs",
+    "package": "rm -f nepenthe.zip && zip -r -q nepenthe.zip manifest.json src options icons && echo nepenthe.zip",
+    "sign": "npx web-ext@10.8.0 sign",
+    "lint": "npx web-ext@10.8.0 lint"
+  }
+}
