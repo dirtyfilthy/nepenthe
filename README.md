@@ -59,3 +59,7 @@ Layout:
 - `src/domain.js`: groups hosts into sites.
 - `src/background.js`: scheduling and messages.
 - `options/`: the settings page.
+
+## License
+
+MIT, see [LICENSE](LICENSE). `src/psl-data.js` is generated from the [Public Suffix List](https://publicsuffix.org/), which is under MPL-2.0.
