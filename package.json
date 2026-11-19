@@ -11,6 +11,7 @@
     "package": "rm -f nepenthe.zip && zip -r -q nepenthe.zip manifest.json src options icons && echo nepenthe.zip",
     "sign": "npx web-ext@10.8.0 sign",
     "lint": "npx web-ext@10.8.0 lint",
-    "publish": "sh tools/publish.sh"
+    "release": "node tools/release.mjs",
+    "amo-status": "node tools/amo-status.mjs"
   }
 }

@@ -9,9 +9,6 @@
   },
   "homepage": { "en-US": "https://github.com/dirtyfilthy/nepenthe" },
   "version": {
-    "license": "MIT",
-    "release_notes": {
-      "en-US": "First public release on addons.mozilla.org."
-    }
+    "license": "MIT"
   }
 }

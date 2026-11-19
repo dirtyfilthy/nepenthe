@@ -76,11 +76,21 @@ Turning it off stops Firefox saving new entries. It doesn't erase what's already
 ```bash
 npm test                    # unit tests (fake browser API)
 npm run e2e                 # real headless Firefox, ~90s; FIREFOX=/path/to/firefox to override
-npm run publish             # submit the last commit to addons.mozilla.org as a public listing (needs the API keys, see Install)
+npm run release -- 0.1.6    # release a new version to addons.mozilla.org (see Releasing)
+npm run amo-status          # review status of every version on addons.mozilla.org
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
 ```
 
-`npm run publish` uploads the extension plus a zip of the source from git, since reviewers need the source of the generated `src/psl-data.js`. The store listing text comes from `amo-metadata.json` on the first public submission only; after that, edit the listing on addons.mozilla.org. Each submission needs a new `version` in `manifest.json`.
+### Releasing
+
+1. As you make changes, describe them for users under `## Unreleased` at the top of [CHANGELOG.md](CHANGELOG.md).
+2. On `main`, with everything committed and the API keys exported (see Install), run `npm run release -- 0.1.6` with the new version. Add `--dry-run` to only check things and see the release notes.
+
+The script turns `## Unreleased` into `## 0.1.6 (date)`, sets the version in `manifest.json` and `package.json`, and runs the unit tests, the Firefox end-to-end test and `web-ext lint`. If any of those fail, it puts the files back and stops. Otherwise it commits `Release 0.1.6` and submits that commit to addons.mozilla.org as a public version. The changelog section becomes the release notes, and a zip of the source from git goes along with it, since reviewers need the source of the generated `src/psl-data.js`. Once the submission is accepted it tags `v0.1.6` and prints the `git push` command; it doesn't push on its own.
+
+If the submission fails, fix the problem and run `npm run release -- --submit-only` to retry it. A version number can only be uploaded once, so if `npm run amo-status` shows the failed version arrived anyway, release a newer one instead.
+
+The store listing text in `amo-metadata.json` was only used for the first public submission (0.1.4). To change the listing now, edit it on addons.mozilla.org.
 
 Layout:
 - `src/sweep.js`: decides what is stale and deletes it.
