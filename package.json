@@ -5,6 +5,7 @@
   "license": "MIT",
   "description": "Disappearing browsing history for Firefox",
   "scripts": {
+    "start": "npx web-ext@10.8.0 run",
     "test": "node --test test/*.test.cjs",
     "e2e": "node test/e2e.mjs",
     "build-psl": "node tools/build-psl.mjs",
