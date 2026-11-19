@@ -79,19 +79,25 @@ Turning it off stops Firefox saving new entries. It doesn't erase what's already
 ## Development
 
 ```bash
+npm start                   # run Nepenthe in a fresh Firefox profile; reloads on save
 npm test                    # unit tests (fake browser API)
 npm run e2e                 # real headless Firefox, ~90s; FIREFOX=/path/to/firefox to override
 npm run release -- 0.1.6    # release a new version to addons.mozilla.org (see Releasing)
 npm run amo-status          # review status of every version on addons.mozilla.org
+npm run sign                # sign an unlisted build on addons.mozilla.org
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
 ```
 
 ### Releasing
 
+Add-on reviews on addons.mozilla.org are done by people and can take days to weeks, so release in batches: about once a month, once there's something polished, and never while a version is still waiting for review. Uploading a newer version can cost the add-on its place in the queue. Between releases, try changes with `npm start`.
+
 1. As you make changes, describe them for users under `## Unreleased` at the top of [CHANGELOG.md](CHANGELOG.md).
 2. On `main`, with everything committed and the API keys exported or in the keychain (see Install), run `npm run release -- 0.1.6` with the new version. Add `--dry-run` to only check things and see the release notes.
 
 The script turns `## Unreleased` into `## 0.1.6 (date)`, sets the version in `manifest.json` and `package.json`, and runs the unit tests, the Firefox end-to-end test and `web-ext lint`. If any of those fail, it puts the files back and stops. Otherwise it commits `Release 0.1.6` and submits that commit to addons.mozilla.org as a public version. The changelog section becomes the release notes, and a zip of the source from git goes along with it, since reviewers need the source of the generated `src/psl-data.js`. Once the submission is accepted it tags `v0.1.6` and prints the `git push` command; it doesn't push on its own.
+
+Both `npm run release` and `npm run sign` check addons.mozilla.org first and stop if any version, listed or unlisted, is still waiting for review. A dry run only reports it. For a critical fix that can't wait, add `--even-if-pending`.
 
 If the submission fails, fix the problem and run `npm run release -- --submit-only` to retry it. A version number can only be uploaded once, so if `npm run amo-status` shows the failed version arrived anyway, release a newer one instead.
 

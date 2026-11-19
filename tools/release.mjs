@@ -4,6 +4,9 @@
 //   npm run release -- 0.1.6 --dry-run  only check and show the release notes
 //   npm run release -- --submit-only    resubmit the release commit at HEAD after a failed submission
 //
+// It refuses while any version is still waiting for review on addons.mozilla.org,
+// unless you add --even-if-pending (for a critical fix).
+//
 // Write what changed under "## Unreleased" in CHANGELOG.md first. That section
 // becomes the version's heading and its addons.mozilla.org release notes.
 // Needs the addons.mozilla.org API keys in the environment or the macOS keychain (see README).
@@ -13,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadAmoKeys, MISSING_KEYS_HELP } from "./amo-keys.mjs";
+import { listVersions, awaitingReview, pendingList, PENDING_ADVICE, OVERRIDE_FLAG } from "./amo-api.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_EXT = "web-ext@10.8.0";
@@ -80,6 +84,28 @@ function submit(version) {
   }
 }
 
+// Stops if a version is waiting for review. A dry run only reports it.
+async function checkReviewQueue() {
+  if (!loadAmoKeys()) {
+    console.log("Couldn't check the addons.mozilla.org review queue: no API keys.\n");
+    return;
+  }
+  let pending;
+  try {
+    pending = awaitingReview(await listVersions());
+  } catch (e) {
+    die(`couldn't check the addons.mozilla.org review queue: ${e.message}`);
+  }
+  if (!pending.length) return;
+  if (evenIfPending) {
+    console.log(`${pendingList(pending)}\nGoing ahead anyway because of ${OVERRIDE_FLAG}.\n`);
+  } else if (dryRun) {
+    console.log(`A real release would stop here. ${pendingList(pending)}\n${PENDING_ADVICE}`);
+  } else {
+    die(`${pendingList(pending)}\n${PENDING_ADVICE}`);
+  }
+}
+
 function finish(version) {
   git("tag", "-a", `v${version}`, "-m", `Nepenthe ${version}`);
   console.log(`\nSubmitted ${version} to addons.mozilla.org and tagged v${version}.`);
@@ -91,6 +117,7 @@ function finish(version) {
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const submitOnly = args.includes("--submit-only");
+const evenIfPending = args.includes(OVERRIDE_FLAG);
 const version = submitOnly ? currentVersion() : args.find((a) => !a.startsWith("--"));
 
 if (!submitOnly && !parse(version || "")) die("give the new version, e.g. `npm run release -- 0.1.6`.");
@@ -98,6 +125,7 @@ if (!dryRun && !loadAmoKeys()) die(MISSING_KEYS_HELP);
 if (!dryRun && git("rev-parse", "--abbrev-ref", "HEAD") !== "main") die("switch to main first: releases are made from main.");
 if (!dryRun && git("status", "--porcelain")) die("commit or stash your changes first: the release is built from a commit.");
 if (tagExists(version)) die(`v${version} is already tagged, so it's already released.`);
+await checkReviewQueue();
 
 if (submitOnly) {
   if (git("log", "-1", "--format=%s") !== `Release ${version}`) {
