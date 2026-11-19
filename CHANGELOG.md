@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 (2026-11-19)
 
 - **Bad night button.** "Forget the last 12 hours" on the settings page (any number of hours) deletes every history visit, download list entry, recently closed tab and search or form entry from that time. Sites first visited in that time also lose their cookies and site data, and the browser cache is cleared. Sites visited before then keep their cookies, and so do sites on the keep list. It asks first, lists the sites that will lose their cookies, and warns about any still open in a tab. Nothing about it is recorded.
 
