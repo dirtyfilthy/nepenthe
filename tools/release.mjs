@@ -72,7 +72,9 @@ function submit(version) {
     // Reviewers need the source of the generated src/psl-data.js, taken from the release commit.
     const sourceZip = join(dir, "nepenthe-source.zip");
     run("git", ["archive", "--format=zip", "-o", sourceZip, "HEAD"]);
-    run("npx", [WEB_EXT, "sign", "--channel=listed", `--amo-metadata=${metadataFile}`, `--upload-source-code=${sourceZip}`]);
+    // Don't wait for approval: a listed review takes days, and web-ext's default
+    // 15-minute wait would end in a timeout error after a successful upload.
+    run("npx", [WEB_EXT, "sign", "--channel=listed", "--approval-timeout=0", `--amo-metadata=${metadataFile}`, `--upload-source-code=${sourceZip}`]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
