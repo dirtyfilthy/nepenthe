@@ -9,7 +9,7 @@
     "e2e": "node test/e2e.mjs",
     "build-psl": "node tools/build-psl.mjs",
     "package": "rm -f nepenthe.zip && zip -r -q nepenthe.zip manifest.json src options icons && echo nepenthe.zip",
-    "sign": "npx web-ext@10.8.0 sign",
+    "sign": "node tools/sign.mjs",
     "lint": "npx web-ext@10.8.0 lint",
     "release": "node tools/release.mjs",
     "amo-status": "node tools/amo-status.mjs"

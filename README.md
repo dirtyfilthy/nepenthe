@@ -38,6 +38,11 @@ Release builds of Firefox only install signed extensions, so pick one of these:
    export WEB_EXT_API_SECRET='...'          # "JWT secret"
    npm run sign
    ```
+   On macOS you can keep the keys in your login keychain and skip the `export`s. Save them once, and the npm scripts read them from there whenever the variables aren't set (`-w` with no value prompts for it, so it stays out of your shell history):
+   ```bash
+   security add-generic-password -s nepenthe-amo -a WEB_EXT_API_KEY -w
+   security add-generic-password -s nepenthe-amo -a WEB_EXT_API_SECRET -w
+   ```
    This uploads the extension to Mozilla as **unlisted**: it's signed for you but not published on the store. It usually comes back within a few minutes as `web-ext-artifacts/*.xpi`. Open that file in Firefox (File → Open File, or drag it into a window) to install it. To ship an update, bump `version` in `manifest.json` and run `npm run sign` again.
 2. **Firefox Developer Edition, Nightly or ESR.** Set `xpinstall.signatures.required` to `false` in `about:config`, run `npm run package`, then go to `about:addons` → gear menu → Install Add-on From File and pick `nepenthe.zip`.
 3. **Try it out.** Go to `about:debugging#/runtime/this-firefox` → Load Temporary Add-on and pick `manifest.json`. A temporary add-on is removed when Firefox restarts, so this isn't good for real use.
@@ -84,7 +89,7 @@ npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a n
 ### Releasing
 
 1. As you make changes, describe them for users under `## Unreleased` at the top of [CHANGELOG.md](CHANGELOG.md).
-2. On `main`, with everything committed and the API keys exported (see Install), run `npm run release -- 0.1.6` with the new version. Add `--dry-run` to only check things and see the release notes.
+2. On `main`, with everything committed and the API keys exported or in the keychain (see Install), run `npm run release -- 0.1.6` with the new version. Add `--dry-run` to only check things and see the release notes.
 
 The script turns `## Unreleased` into `## 0.1.6 (date)`, sets the version in `manifest.json` and `package.json`, and runs the unit tests, the Firefox end-to-end test and `web-ext lint`. If any of those fail, it puts the files back and stops. Otherwise it commits `Release 0.1.6` and submits that commit to addons.mozilla.org as a public version. The changelog section becomes the release notes, and a zip of the source from git goes along with it, since reviewers need the source of the generated `src/psl-data.js`. Once the submission is accepted it tags `v0.1.6` and prints the `git push` command; it doesn't push on its own.
 

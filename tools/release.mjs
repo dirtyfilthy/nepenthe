@@ -6,12 +6,13 @@
 //
 // Write what changed under "## Unreleased" in CHANGELOG.md first. That section
 // becomes the version's heading and its addons.mozilla.org release notes.
-// Needs WEB_EXT_API_KEY and WEB_EXT_API_SECRET in the environment (see README).
+// Needs the addons.mozilla.org API keys in the environment or the macOS keychain (see README).
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadAmoKeys, MISSING_KEYS_HELP } from "./amo-keys.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_EXT = "web-ext@10.8.0";
@@ -91,9 +92,7 @@ const submitOnly = args.includes("--submit-only");
 const version = submitOnly ? currentVersion() : args.find((a) => !a.startsWith("--"));
 
 if (!submitOnly && !parse(version || "")) die("give the new version, e.g. `npm run release -- 0.1.6`.");
-if (!dryRun && (!process.env.WEB_EXT_API_KEY || !process.env.WEB_EXT_API_SECRET)) {
-  die("set WEB_EXT_API_KEY and WEB_EXT_API_SECRET first (see README).");
-}
+if (!dryRun && !loadAmoKeys()) die(MISSING_KEYS_HELP);
 if (!dryRun && git("rev-parse", "--abbrev-ref", "HEAD") !== "main") die("switch to main first: releases are made from main.");
 if (!dryRun && git("status", "--porcelain")) die("commit or stash your changes first: the release is built from a commit.");
 if (tagExists(version)) die(`v${version} is already tagged, so it's already released.`);

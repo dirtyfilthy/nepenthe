@@ -1,18 +1,19 @@
 // Shows Nepenthe's status on addons.mozilla.org: whether the listing is public,
 // and every uploaded version with its channel and review status.
-// Needs WEB_EXT_API_KEY and WEB_EXT_API_SECRET in the environment (see README).
+// Needs the addons.mozilla.org API keys in the environment or the macOS keychain (see README).
 import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadAmoKeys, MISSING_KEYS_HELP } from "./amo-keys.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const API = "https://addons.mozilla.org/api/v5";
-const { WEB_EXT_API_KEY: key, WEB_EXT_API_SECRET: secret } = process.env;
-if (!key || !secret) {
-  console.error("Set WEB_EXT_API_KEY and WEB_EXT_API_SECRET first (see README).");
+if (!loadAmoKeys()) {
+  console.error(`amo-status: ${MISSING_KEYS_HELP}`);
   process.exit(1);
 }
+const { WEB_EXT_API_KEY: key, WEB_EXT_API_SECRET: secret } = process.env;
 const id = JSON.parse(readFileSync(join(ROOT, "manifest.json"), "utf8")).browser_specific_settings.gecko.id;
 
 // addons.mozilla.org wants a short-lived HS256 JWT per request.
