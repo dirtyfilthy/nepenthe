@@ -143,6 +143,39 @@ $("clearForms").addEventListener("click", async () => {
   }
 });
 
+function badNightHours() {
+  return Math.max(1, Math.floor(Number($("badNightHours").value) || 12));
+}
+
+$("badNightHours").addEventListener("input", () => {
+  const h = badNightHours();
+  $("badNight").textContent = `Forget the last ${h} ${h === 1 ? "hour" : "hours"}`;
+});
+
+$("badNight").addEventListener("click", async () => {
+  const btn = $("badNight");
+  const status = $("badNightStatus");
+  const since = Date.now() - badNightHours() * 3600e3;
+  btn.disabled = true;
+  status.textContent = "";
+  try {
+    const r = await browser.runtime.sendMessage({ type: "badNightPreview", since });
+    let msg = `Forget everything since ${fmt(since)}? This deletes ${describe(r.counts)}, plus search and form history from that time.`;
+    if (r.sites.length) msg += `\n\nFirst visited in that time, so their cookies and site data go too: ${r.sites.map((x) => x.site).join(", ")}.`;
+    if (r.openSites.length) msg += `\n\nStill open in a tab: ${r.openSites.join(", ")}. Close those tabs too, or they'll put history and cookies straight back.`;
+    msg += "\n\nThis can't be undone.";
+    if (!confirm(msg)) return;
+    const result = await browser.runtime.sendMessage({ type: "badNight", since });
+    const failed = Object.keys(result.failures);
+    status.textContent = failed.length ? `Done, but with problems: ${failed.join(", ")}.` : "Forgotten.";
+  } catch (e) {
+    status.textContent = `Couldn't do it: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    renderStatus();
+  }
+});
+
 $("grant").addEventListener("click", async () => {
   await browser.permissions.request(ALL_URLS);
   checkPermission();

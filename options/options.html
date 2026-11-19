@@ -41,7 +41,7 @@
       <label><input type="checkbox" id="siteData"> Local storage, IndexedDB and service workers of those sites, and the browser cache <small>(Firefox can only clear all of it at once)</small></label>
       <label><input type="checkbox" id="downloads"> Download list entries older than the limit <small>(files stay on disk)</small></label>
       <label><input type="checkbox" id="closedTabs"> Recently closed tabs and windows older than the limit</label>
-      <p class="hint note">Not covered: search and form history (what you type into search boxes and forms). Firefox gives extensions no way to delete it by age, so turn it off in Firefox Settings → Privacy &amp; Security → History → <b>Customize history</b> → <b>Choose what you want Firefox to remember</b>, then untick <b>Remember search and form history</b>. Leave browsing history on, because Nepenthe needs it.</p>
+      <p class="hint note">Not covered: search and form history (what you type into search boxes and forms). Firefox gives extensions no way to delete what's older than a limit (the Bad night button below can delete the last few hours), so turn it off in Firefox Settings → Privacy &amp; Security → History → <b>Customize history</b> → <b>Choose what you want Firefox to remember</b>, then untick <b>Remember search and form history</b>. Leave browsing history on, because Nepenthe needs it.</p>
       <p class="hint note">Turning it off doesn't erase what's already saved. This button does, all of it at once. Saved passwords, addresses and cards aren't touched.</p>
       <div class="actions">
         <button id="clearForms" type="button" class="danger">Clear all saved search and form history</button>
@@ -72,6 +72,20 @@
       <p id="preview-summary"></p>
       <p id="preview-warn" class="banner warn" hidden></p>
       <ul id="preview-list"></ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bad night</h2>
+    <p class="hint">Forget the last few hours right now. All history, downloads, recently closed tabs, and search and form history from that time are deleted. Sites you first visited in that time also lose their cookies and site data. Sites you'd visited before then keep theirs, so you stay signed in. This doesn't depend on the settings above, except that sites on the keep list keep their cookies.</p>
+    <div class="row">
+      <span>Forget the last</span>
+      <input type="number" id="badNightHours" min="1" step="1" value="12">
+      <span>hours</span>
+    </div>
+    <div class="actions">
+      <button id="badNight" type="button" class="danger">Forget the last 12 hours</button>
+      <span id="badNightStatus" class="muted" aria-live="polite"></span>
     </div>
   </section>
 </main>

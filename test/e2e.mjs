@@ -51,7 +51,7 @@ const site = (name, path = "/") => `http://${name}.test:${PORT}${path}`;
 // --- Firefox ----------------------------------------------------------------
 const profile = mkdtempSync(join(tmpdir(), "nepenthe-e2e-"));
 const prefs = {
-  "network.dns.localDomains": "old.test,fresh.test,open.test",
+  "network.dns.localDomains": "old.test,fresh.test,open.test,night.test",
   "network.proxy.type": 0,
   "dom.security.https_first": false,
   "dom.security.https_first_schemeless": false,
@@ -162,17 +162,22 @@ try {
   assert.ok(opt, "options page should open on install");
   await evalIn(opt, `browser.storage.local.set({ settings: { enabled: false, amount: 1, unit: "minutes" } })`);
 
-  log("clear-form-history button");
   // Submitting a form makes Firefox save what was typed, like a real search.
-  const formTab = await newTab(site("fresh", "/form"));
-  await evalIn(formTab, `document.querySelector("input").focus()`);
-  const keys = [..."nepenthe test"].flatMap((value) => [{ type: "keyDown", value }, { type: "keyUp", value }]);
-  keys.push({ type: "keyDown", value: "\uE007" }, { type: "keyUp", value: "\uE007" }); // Enter submits
-  await send("input.performActions", { context: formTab, actions: [{ type: "key", id: "kbd", actions: keys }] });
-  let saved = 0;
-  for (let i = 0; i < 50 && !saved; i++) { await sleep(200); saved = formHistoryCount(); }
+  async function submitForm(name) {
+    const formTab = await newTab(site(name, "/form"));
+    await evalIn(formTab, `document.querySelector("input").focus()`);
+    const keys = [..."nepenthe test"].flatMap((value) => [{ type: "keyDown", value }, { type: "keyUp", value }]);
+    keys.push({ type: "keyDown", value: "\uE007" }, { type: "keyUp", value: "\uE007" }); // Enter submits
+    await send("input.performActions", { context: formTab, actions: [{ type: "key", id: "kbd", actions: keys }] });
+    let saved = 0;
+    for (let i = 0; i < 50 && !saved; i++) { await sleep(200); saved = formHistoryCount(); }
+    await send("browsingContext.close", { context: formTab });
+    return saved;
+  }
+
+  log("clear-form-history button");
+  const saved = await submitForm("fresh");
   assert.ok(saved > 0, "form history saved");
-  await send("browsingContext.close", { context: formTab });
   // BiDi can't answer dialogs on extension pages, so stand in for confirm(): record it and say OK.
   await evalIn(opt, `(window.confirmed = [], window.confirm = (m) => (window.confirmed.push(m), true), true)`);
   await evalIn(opt, `document.getElementById("clearForms").click()`);
@@ -232,6 +237,47 @@ try {
   assert.equal(assetHits.old, 2, "old.test's cached asset should be gone");
   // Per-host cache clearing doesn't work in Firefox, so the whole cache is cleared.
   assert.equal(assetHits.fresh, 2, "whole cache is cleared when any site expires");
+
+  log("bad night: revisit fresh.test, then visit night.test for the first time");
+  const since = Date.now();
+  await sleep(1500);
+  await send("browsingContext.close", { context: await visit("fresh") });
+  assert.ok((await submitForm("night")) > 0, "form history saved tonight");
+  const nightTab = await visit("night");
+
+  // The button asks first; say no and check nothing happened.
+  await evalIn(opt, `(window.confirmed = [], window.confirm = (m) => (window.confirmed.push(m), false), true)`);
+  await evalIn(opt, `document.getElementById("badNight").click()`);
+  let asked = [];
+  for (let i = 0; i < 50 && !asked.length; i++) { await sleep(100); asked = await evalIn(opt, `window.confirmed`); }
+  assert.match(asked[0], /^Forget everything since .*night\.test.*Still open in a tab: night\.test/s);
+  assert.ok((await evalIn(opt, `browser.cookies.getAll({ domain: "night.test" })`)).length, "cancelled: night.test cookie kept");
+
+  const nightPreview = await evalIn(opt, `browser.runtime.sendMessage({ type: "badNightPreview", since: ${since} })`);
+  log("bad night preview:", JSON.stringify(nightPreview.sites), JSON.stringify(nightPreview.counts));
+  assert.deepEqual(nightPreview.sites.map((s) => s.site), ["night.test"], "fresh.test was visited before, so it's kept");
+  assert.deepEqual(nightPreview.openSites, ["night.test"]);
+  await send("browsingContext.close", { context: nightTab });
+
+  const nightResult = await evalIn(opt, `browser.runtime.sendMessage({ type: "badNight", since: ${since} })`);
+  log("bad night:", JSON.stringify(nightResult));
+  assert.deepEqual(nightResult.failures, {});
+
+  const tonight = await evalIn(opt, `browser.history.search({ text: "", startTime: ${since}, maxResults: 1000 }).then(h => h.map(x => x.url))`);
+  assert.deepEqual(tonight, [], "no visits since then");
+  const histAfter = await evalIn(opt, `browser.history.search({ text: "", startTime: 0, maxResults: 1000 }).then(h => h.map(x => x.url))`);
+  assert.ok(histAfter.some((u) => u.includes("fresh.test")), "fresh.test's earlier visit kept");
+  assert.ok(!histAfter.some((u) => u.includes("night.test")), "night.test history gone");
+  const cookiesAfter = await evalIn(opt, `browser.cookies.getAll({ firstPartyDomain: null, partitionKey: {} }).then(c => c.map(x => x.domain))`);
+  assert.deepEqual(cookiesAfter.sort(), ["fresh.test", "open.test"]);
+  let formLeft = 1;
+  for (let i = 0; i < 25 && formLeft; i++) { await sleep(200); formLeft = formHistoryCount(); }
+  assert.equal(formLeft, 0, "tonight's form history gone");
+  assert.ok(!JSON.stringify(await evalIn(opt, `browser.storage.local.get()`)).includes("night"), "bad night isn't recorded");
+  const nightData = await inspect("night");
+  log("night.test:", JSON.stringify(nightData));
+  assert.deepEqual(nightData, { cookie: "", ls: null, idb: [] });
+  assert.equal((await inspect("fresh")).cookie, "sid=1");
 
   log("PASS");
 } catch (e) {

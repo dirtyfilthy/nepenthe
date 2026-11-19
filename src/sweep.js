@@ -8,6 +8,10 @@
 //    deleted for every site with no visit inside the limit, no open tab, and
 //    not on the keep list. Partitioned (third-party) cookies follow the
 //    top-level site they were set under.
+//
+// "Bad night" (planBadNight) works the other way round: everything since a
+// moment is deleted, and sites first visited after it lose their cookies and
+// site data. Sites with an earlier visit keep theirs.
 (function (root) {
   const D = root.Domain;
   const S = root.Settings;
@@ -58,9 +62,9 @@
     };
 
     const oldHistory = await api.history.search({ text: "", startTime: 0, endTime: cutoff, maxResults: MAX_RESULTS });
-    let expiredHistoryUrls = 0;
+    let historyUrls = 0;
     for (const item of oldHistory) {
-      if ((item.lastVisitTime || 0) < cutoff) expiredHistoryUrls++;
+      if ((item.lastVisitTime || 0) < cutoff) historyUrls++;
       const u = D.parseWebUrl(item.url);
       if (!u) continue;
       const site = D.baseDomain(u.hostname);
@@ -97,7 +101,77 @@
       closed = (await api.sessions.getRecentlyClosed()).filter((s) => (s.lastModified || 0) < cutoff);
     }
 
-    return { settings, cutoff, recentSiteCount: recent.size, stale, staleCookies, expiredHistoryUrls, downloads, closed };
+    return {
+      settings, cutoff, recentSiteCount: recent.size, stale, staleCookies, historyUrls, downloads, closed,
+      historyRange: { startTime: 0, endTime: cutoff },
+    };
+  }
+
+  // Everything since `since`: every history visit, download entry, closed tab
+  // and search/form entry. Sites whose first visit is after `since` also lose
+  // their cookies and site data, even if open in a tab (the tab is reported
+  // so the user can close it). The keep list still protects a site.
+  async function planBadNight(api, rawSettings, since, now = Date.now()) {
+    const base = S.normalize(rawSettings);
+    // The button means "forget it all", whatever the automatic sweep is set to delete.
+    const settings = { ...base, history: true, cookies: true, siteData: true, downloads: true, closedTabs: true };
+
+    const keep = new Set(settings.keepSites.map((s) => D.baseDomain(s)).filter(Boolean));
+    const before = new Set();
+    for (const item of await api.history.search({ text: "", startTime: 0, endTime: since - 1, maxResults: MAX_RESULTS })) {
+      const site = D.siteOfUrl(item.url);
+      if (site) before.add(site);
+    }
+
+    const stale = new Map();
+    const recentHistory = await api.history.search({ text: "", startTime: since, endTime: now, maxResults: MAX_RESULTS });
+    for (const item of recentHistory) {
+      const u = D.parseWebUrl(item.url);
+      if (!u) continue;
+      const site = D.baseDomain(u.hostname);
+      if (!site || before.has(site) || keep.has(site)) continue;
+      let e = stale.get(site);
+      if (!e) {
+        e = { hosts: new Set([site, "www." + site]), cookies: [], historyUrls: 0 };
+        stale.set(site, e);
+      }
+      e.hosts.add(u.hostname);
+      e.hosts.add(u.host);
+      e.historyUrls++;
+    }
+
+    const staleCookies = [];
+    if (stale.size) {
+      for (const store of await api.cookies.getAllCookieStores()) {
+        const cookies = await api.cookies.getAll({ storeId: store.id, firstPartyDomain: null, partitionKey: {} });
+        for (const c of cookies) {
+          const e = stale.get(cookieSite(c));
+          if (!e) continue;
+          e.cookies.push(c);
+          staleCookies.push(c);
+        }
+      }
+    }
+
+    const openSites = new Set();
+    for (const tab of await api.tabs.query({})) {
+      const site = D.siteOfUrl(tab.url);
+      if (stale.has(site)) openSites.add(site);
+    }
+
+    const downloads = (await api.downloads.search({ startedAfter: since })).filter((d) => d.state !== "in_progress");
+    const closed = (await api.sessions.getRecentlyClosed()).filter((s) => (s.lastModified || 0) >= since);
+
+    return {
+      settings, since, stale, staleCookies, downloads, closed,
+      historyUrls: recentHistory.length,
+      historyRange: { startTime: since, endTime: now },
+      openSites: [...openSites].sort(),
+      formDataSince: since,
+      // The cache can't be cleared by time or by site, and it holds tonight's pages
+      // of sites visited before too.
+      clearCache: true,
+    };
   }
 
   // A JSON-safe view of a plan for the options page (kept in memory only).
@@ -107,12 +181,14 @@
       .sort((a, b) => a.site.localeCompare(b.site));
     return {
       cutoff: p.cutoff,
+      since: p.since,
       recentSiteCount: p.recentSiteCount,
+      openSites: p.openSites || [],
       sites,
       counts: {
         sites: sites.length,
         cookies: p.settings.cookies ? p.staleCookies.length : 0,
-        historyUrls: p.settings.history ? p.expiredHistoryUrls : 0,
+        historyUrls: p.settings.history ? p.historyUrls : 0,
         downloads: p.downloads.length,
         closedTabs: p.closed.length,
       },
@@ -135,7 +211,7 @@
     const hostnames = [...new Set([...p.stale.values()].flatMap((e) => [...e.hosts]))];
 
     // Site data first, while we still know which hosts to target.
-    if (settings.siteData && hostnames.length) {
+    if (settings.siteData && (hostnames.length || p.clearCache)) {
       // Firefox's per-host cache clearing only matches unpartitioned entries, but
       // with network partitioning (the default) every entry is partitioned, so it
       // silently removes nothing. The whole HTTP cache is the only reliable target.
@@ -144,6 +220,8 @@
       } catch {
         fail("cache");
       }
+    }
+    if (settings.siteData && hostnames.length) {
       // One call per type so a failure in one doesn't skip the rest.
       for (const type of ["localStorage", "indexedDB", "serviceWorkers"]) {
         try {
@@ -170,10 +248,19 @@
 
     if (settings.history) {
       try {
-        await api.history.deleteRange({ startTime: 0, endTime: p.cutoff });
-        counts.historyUrls = p.expiredHistoryUrls;
+        await api.history.deleteRange(p.historyRange);
+        counts.historyUrls = p.historyUrls;
       } catch {
         fail("history");
+      }
+    }
+
+    if (p.formDataSince !== undefined) {
+      // Firefox can remove form history "since" a time, though not "before" one.
+      try {
+        await api.browsingData.removeFormData({ since: p.formDataSince });
+      } catch {
+        fail("formData");
       }
     }
 
@@ -199,7 +286,7 @@
     return { counts, failures };
   }
 
-  const Sweep = { plan, summarize, execute, cookieSite, cookieUrl };
+  const Sweep = { plan, planBadNight, summarize, execute, cookieSite, cookieUrl };
   root.Sweep = Sweep;
   if (typeof module !== "undefined") module.exports = Sweep;
 })(globalThis);

@@ -24,7 +24,7 @@ function cookie(domain, extra = {}) {
 }
 
 function fakeApi({ history = [], tabs = [], cookies = [], downloads = [], closed = [] } = {}) {
-  const calls = { browsingData: [], cacheCleared: [], cookiesRemoved: [], deleteRange: [], erased: [], forgotTabs: [], forgotWindows: [] };
+  const calls = { browsingData: [], cacheCleared: [], formData: [], cookiesRemoved: [], deleteRange: [], erased: [], forgotTabs: [], forgotWindows: [] };
   const api = {
     calls,
     history: {
@@ -47,9 +47,12 @@ function fakeApi({ history = [], tabs = [], cookies = [], downloads = [], closed
     browsingData: {
       async remove(opts, types) { calls.browsingData.push({ hostnames: opts.hostnames, types }); },
       async removeCache(opts) { calls.cacheCleared.push(opts); },
+      async removeFormData(opts) { calls.formData.push(opts); },
     },
     downloads: {
-      async search({ startedBefore }) { return downloads.filter((d) => d.startTime < startedBefore); },
+      async search({ startedBefore = Infinity, startedAfter = -Infinity }) {
+        return downloads.filter((d) => d.startTime < startedBefore && d.startTime > startedAfter);
+      },
       async erase({ id }) { calls.erased.push(id); },
     },
     sessions: {
@@ -99,6 +102,7 @@ test("stale sites lose cookies and site data; active sites keep them", async () 
   assert.deepEqual(api.calls.browsingData.map((c) => Object.keys(c.types)[0]),
     ["localStorage", "indexedDB", "serviceWorkers"]);
   assert.deepEqual(api.calls.cacheCleared, [{}]); // whole cache: per-host clearing doesn't work in Firefox
+  assert.deepEqual(api.calls.formData, []); // the regular sweep can't expire form history by age
 
   const removed = api.calls.cookiesRemoved;
   assert.ok(removed.some((d) => d.url === "http://orphan.org/p" && d.storeId === "firefox-container-1"));
@@ -170,6 +174,78 @@ test("a failing step is counted without stopping the others or recording hostnam
   assert.equal(r.counts.cookies, 1);
   assert.equal(api.calls.deleteRange.length, 1);
   assert.ok(!JSON.stringify(r).includes("old.com"));
+});
+
+test("bad night forgets everything since a time, and new sites lose their cookies", async () => {
+  const HOUR = 3600e3;
+  const since = NOW - 12 * HOUR;
+  const api = fakeApi({
+    history: [
+      { url: "https://www.new.com/a", visits: [NOW - 2 * HOUR] },
+      { url: "http://x.new.com:8080/b", visits: [NOW - 1 * HOUR] },
+      { url: "https://regular.com/", visits: [NOW - 3 * DAY, NOW - 1 * HOUR] }, // visited before tonight
+      { url: "https://other.regular.com/tonight", visits: [NOW - 1 * HOUR] }, // new page, old site
+      { url: "https://kept.com/", visits: [NOW - 1 * HOUR] },
+      { url: "https://lastweek.com/", visits: [NOW - 3 * DAY] },
+      { url: "about:config", visits: [NOW - 1 * HOUR] },
+    ],
+    tabs: ["https://new.com/still-open", "https://regular.com/"],
+    cookies: [
+      cookie(".new.com"),
+      cookie(".tracker.net", { partitionKey: { topLevelSite: "https://new.com" } }),
+      cookie(".tracker.net", { partitionKey: { topLevelSite: "https://regular.com" } }),
+      cookie("regular.com"),
+      cookie("kept.com"),
+      cookie("lastweek.com"),
+      cookie("orphan.org"), // no history: left to the regular sweep
+    ],
+    downloads: [
+      { id: 1, startTime: NOW - 3 * DAY, state: "complete" },
+      { id: 2, startTime: NOW - 1 * HOUR, state: "complete" },
+      { id: 3, startTime: NOW - 1 * HOUR, state: "in_progress" },
+    ],
+    closed: [
+      { lastModified: NOW - 3 * DAY, tab: { windowId: 1, sessionId: "old" } },
+      { lastModified: NOW - 1 * HOUR, tab: { windowId: 1, sessionId: "tonight" } },
+    ],
+  });
+  // The automatic settings don't matter: bad night always deletes every category.
+  const off = { ...settings, history: false, cookies: false, siteData: false, downloads: false, closedTabs: false, keepSites: ["kept.com"] };
+  const p = await Sweep.planBadNight(api, off, since, NOW);
+  const s = Sweep.summarize(p);
+  assert.deepEqual(s.sites, [{ site: "new.com", cookies: 2, historyUrls: 2 }]);
+  assert.deepEqual(s.openSites, ["new.com"]);
+  assert.equal(s.counts.historyUrls, 6); // every page visited since, including about:config and regular.com's
+  assert.equal(s.since, since);
+
+  const r = await Sweep.execute(api, p);
+  assert.deepEqual(r.failures, {});
+  assert.deepEqual(api.calls.deleteRange, [{ startTime: since, endTime: NOW }]);
+  assert.deepEqual(api.calls.formData, [{ since }]);
+  assert.deepEqual(api.calls.cacheCleared, [{}]);
+  const hosts = api.calls.browsingData[0].hostnames;
+  for (const h of ["new.com", "www.new.com", "x.new.com", "x.new.com:8080"]) assert.ok(hosts.includes(h), h);
+  assert.ok(!hosts.some((h) => !h.includes("new.com")), hosts.join());
+  assert.deepEqual(api.calls.cookiesRemoved.map((d) => d.partitionKey?.topLevelSite || d.url),
+    ["https://new.com/", "https://new.com"]);
+  assert.deepEqual(api.calls.erased, [2]);
+  assert.deepEqual(api.calls.forgotTabs, [[1, "tonight"]]);
+});
+
+test("bad night with only familiar sites still clears tonight's history, form data and cache", async () => {
+  const since = NOW - 12 * 3600e3;
+  const api = fakeApi({
+    history: [{ url: "https://regular.com/", visits: [NOW - 3 * DAY, NOW - 3600e3] }],
+    cookies: [cookie("regular.com")],
+  });
+  const p = await Sweep.planBadNight(api, settings, since, NOW);
+  await Sweep.execute(api, p);
+  assert.equal(p.stale.size, 0);
+  assert.equal(api.calls.cookiesRemoved.length, 0);
+  assert.equal(api.calls.browsingData.length, 0);
+  assert.deepEqual(api.calls.cacheCleared, [{}]);
+  assert.deepEqual(api.calls.formData, [{ since }]);
+  assert.deepEqual(api.calls.deleteRange, [{ startTime: since, endTime: NOW }]);
 });
 
 test("sweep interval scales with the limit", () => {

@@ -18,6 +18,16 @@ Nepenthe checks every 15 minutes, or more often when the limit is short, and als
 
 Nepenthe doesn't keep its own record of sites. Its storage holds only your settings and the counts from the last run.
 
+## Bad night
+
+The settings page has a **Forget the last 12 hours** button (you can change the number of hours). It deletes, right away:
+
+- every history visit, download list entry and recently closed tab or window from that time
+- search and form history from that time (Firefox can delete this "since" a time, though not "before" one)
+- cookies and site data of every site you **first** visited in that time, plus the whole HTTP cache
+
+Sites you'd visited before then keep their cookies, so you stay signed in, but their visits from that time are still deleted. Sites on the keep list keep their cookies too. It ignores which categories are ticked for the automatic sweep. Before deleting, it lists the sites that will lose their cookies and warns about any that are still open in a tab, since an open tab can put history and cookies straight back. Nothing about it is recorded in Nepenthe's storage.
+
 ## Install
 
 Release builds of Firefox only install signed extensions, so pick one of these:
@@ -38,7 +48,7 @@ After installing, the settings page opens. Nepenthe stays **off** until you tick
 
 These are limits of what Firefox lets extensions do:
 
-- **Search and form history.** This is what you've typed into search boxes and web forms. Firefox offers extensions no way to delete it by site or by age, so stop Firefox saving it (see [Turn off search and form history](#turn-off-search-and-form-history)).
+- **Search and form history.** This is what you've typed into search boxes and web forms. Firefox offers extensions no way to delete it by site or once it's older than a limit (only everything since a time, which the [Bad night](#bad-night) button uses), so stop Firefox saving it (see [Turn off search and form history](#turn-off-search-and-form-history)).
 - **Site permissions and per-site settings,** such as notifications, camera, zoom and cookie exceptions, plus **HSTS records.** Extensions can't reach these.
 - **Bookmarks and saved passwords.** These are kept on purpose. A bookmarked page loses its visits but the bookmark stays.
 - **Clearing one site's cache.** Firefox's per-site cache clearing silently does nothing, because network partitioning (on by default) stores every cache entry under the top-level site and the per-site delete doesn't match those entries. So whenever a site expires, Nepenthe clears the whole HTTP cache. Pages load a little slower until the cache refills, but no cached file outlives its site.
