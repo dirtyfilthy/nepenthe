@@ -50,17 +50,33 @@ async function renderStatus() {
     browser.runtime.sendMessage({ type: "schedule" }),
   ]);
   const s = Settings.normalize(settings);
-  const lines = [];
-  lines.push(s.enabled ? `On. Things disappear after ${s.amount} ${s.unit}.` : "Off. Nothing is deleted automatically.");
-  if (alarm) lines.push(`Next check ${fmt(alarm.scheduledTime)}, then every ${alarm.periodInMinutes} min.`);
+  // One fact per row: [label, value, optional bold lead-in].
+  const rows = [
+    s.enabled
+      ? ["Automatic deletion", ` Things disappear after ${s.amount} ${s.unit}.`, "On."]
+      : ["Automatic deletion", " Nothing is deleted automatically.", "Off."],
+  ];
+  if (alarm) rows.push(["Next check", `${fmt(alarm.scheduledTime)}, then every ${alarm.periodInMinutes} min`]);
   if (lastSweep) {
-    const c = lastSweep.counts;
-    let line = `Last run ${fmt(lastSweep.at)}`;
-    if (c) line += `: deleted ${describe(c)}`;
-    if (!lastSweep.ok) line += `. Problems with: ${Object.keys(lastSweep.failures).join(", ")}`;
-    lines.push(line + ".");
+    rows.push(["Last run", fmt(lastSweep.at)]);
+    if (lastSweep.counts) rows.push(["Deleted", describe(lastSweep.counts)]);
+    if (!lastSweep.ok) rows.push(["Problems with", Object.keys(lastSweep.failures).join(", ")]);
   }
-  $("status").textContent = lines.join(" ");
+  $("status").replaceChildren(
+    ...rows.flatMap(([label, value, state]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      if (state) {
+        const strong = document.createElement("span");
+        strong.className = "status-state";
+        strong.textContent = state;
+        dd.append(strong);
+      }
+      dd.append(value);
+      return [dt, dd];
+    })
+  );
 }
 
 async function checkPermission() {
@@ -83,7 +99,9 @@ async function preview() {
       const li = document.createElement("li");
       const code = document.createElement("code");
       code.textContent = x.site;
-      li.append(code, ` (${x.cookies} cookies, ${x.historyUrls} history pages)`);
+      const counts = document.createElement("span");
+      counts.textContent = `${x.cookies} cookies, ${x.historyUrls} history pages`;
+      li.append(code, counts);
       return li;
     })
   );

@@ -7,85 +7,141 @@
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
-<main>
-  <h1>Nepenthe</h1>
-  <p class="lede">Browsing that disappears. Anything older than the limit is deleted, and so is every trace of a site you haven't visited within it.</p>
+<main class="page">
+  <header class="page-header">
+    <img class="page-mark" src="../icons/icon.svg" alt="">
+    <div>
+      <h1 class="page-title">Nepenthe</h1>
+      <p class="page-lede">Browsing that disappears. Anything older than the limit is deleted, and so is every trace of a site you haven't visited within it.</p>
+    </div>
+  </header>
 
-  <div id="perm-warning" class="banner warn" hidden>
-    Nepenthe needs access to all sites to find and delete their cookies.
-    <button id="grant" type="button">Grant access</button>
+  <div id="perm-warning" class="callout callout-warn" hidden>
+    <p>Nepenthe needs access to all sites to find and delete their cookies.</p>
+    <button id="grant" type="button" class="btn">Grant access</button>
   </div>
 
-  <form id="form">
-    <section>
-      <label class="switch">
-        <input type="checkbox" id="enabled">
-        <span>Automatically delete</span>
-      </label>
-      <div class="row">
-        <span>Disappear after</span>
-        <input type="number" id="amount" min="1" step="1" required>
-        <select id="unit">
-          <option value="minutes">minutes</option>
-          <option value="hours">hours</option>
-          <option value="days">days</option>
-          <option value="weeks">weeks</option>
-        </select>
+  <form id="form" class="card">
+    <div class="card-head">
+      <h2 class="card-title">Settings</h2>
+    </div>
+    <label class="check check-lead">
+      <input type="checkbox" id="enabled">
+      <span class="check-label">Automatically delete</span>
+    </label>
+    <div class="field">
+      <label for="amount">Disappear after</label>
+      <input class="input input-number" type="number" id="amount" min="1" step="1" required>
+      <select class="select" id="unit" aria-label="Unit">
+        <option value="minutes">minutes</option>
+        <option value="hours">hours</option>
+        <option value="days">days</option>
+        <option value="weeks">weeks</option>
+      </select>
+    </div>
+
+    <div class="card-section">
+      <h3 class="card-subtitle">What disappears</h3>
+      <div class="checks">
+        <label class="check">
+          <input type="checkbox" id="history">
+          <span class="check-label">History visits older than the limit <span class="check-note">Even on sites you still use.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="cookies">
+          <span class="check-label">Cookies of sites not visited within the limit</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="siteData">
+          <span class="check-label">Local storage, IndexedDB and service workers of those sites, and the browser cache <span class="check-note">Firefox can only clear all of the cache at once.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="downloads">
+          <span class="check-label">Download list entries older than the limit <span class="check-note">Files stay on disk.</span></span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="closedTabs">
+          <span class="check-label">Recently closed tabs and windows older than the limit</span>
+        </label>
       </div>
-    </section>
+    </div>
 
-    <section>
-      <h2>What disappears</h2>
-      <label><input type="checkbox" id="history"> History visits older than the limit <small>(even on sites you still use)</small></label>
-      <label><input type="checkbox" id="cookies"> Cookies of sites not visited within the limit</label>
-      <label><input type="checkbox" id="siteData"> Local storage, IndexedDB and service workers of those sites, and the browser cache <small>(Firefox can only clear all of it at once)</small></label>
-      <label><input type="checkbox" id="downloads"> Download list entries older than the limit <small>(files stay on disk)</small></label>
-      <label><input type="checkbox" id="closedTabs"> Recently closed tabs and windows older than the limit</label>
-      <p class="hint note">Not covered: search and form history (what you type into search boxes and forms). Firefox gives extensions no way to delete what's older than a limit (the Bad night button below can delete the last few hours), so turn it off in Firefox Settings → Privacy &amp; Security → History → <b>Customize history</b> → <b>Choose what you want Firefox to remember</b>, then untick <b>Remember search and form history</b>. Leave browsing history on, because Nepenthe needs it.</p>
-      <p class="hint note">Turning it off doesn't erase what's already saved. This button does, all of it at once. Saved passwords, addresses and cards aren't touched.</p>
-      <div class="actions">
-        <button id="clearForms" type="button" class="danger">Clear all saved search and form history</button>
-        <span id="clearFormsStatus" class="muted" aria-live="polite"></span>
+    <div class="card-section">
+      <div class="field-stack">
+        <label class="card-subtitle" for="keepSites">Keep these sites</label>
+        <p class="card-hint">One per line. Cookies and site data for these sites never expire, so you stay signed in. Their history still disappears.</p>
+        <textarea class="textarea" id="keepSites" rows="5" spellcheck="false" placeholder="mail.example.com"></textarea>
       </div>
-    </section>
+    </div>
 
-    <section>
-      <h2>Keep these sites</h2>
-      <p class="hint">One per line. Cookies and site data for these sites never expire, so you stay signed in. Their history still disappears.</p>
-      <textarea id="keepSites" rows="5" spellcheck="false" placeholder="mail.example.com"></textarea>
-    </section>
-
-    <div class="actions">
-      <button type="submit" class="primary">Save</button>
-      <span id="saved" class="muted" aria-live="polite"></span>
+    <div class="card-footer actions">
+      <button type="submit" class="btn btn-primary">Save settings</button>
+      <span id="saved" class="actions-status" aria-live="polite"></span>
     </div>
   </form>
 
-  <section>
-    <h2>Now</h2>
-    <p id="status" class="muted">Loading…</p>
-    <div class="actions">
-      <button id="preview" type="button">Preview</button>
-      <button id="sweep" type="button" class="danger">Delete expired now</button>
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">Now</h2>
     </div>
-    <div id="preview-out" hidden>
+    <dl id="status" class="status">
+      <dt>Automatic deletion</dt><dd>Loading…</dd>
+    </dl>
+    <div class="actions">
+      <button id="preview" type="button" class="btn">Preview</button>
+      <button id="sweep" type="button" class="btn btn-danger">Delete expired now</button>
+    </div>
+    <div id="preview-out" class="stack" hidden>
       <p id="preview-summary"></p>
-      <p id="preview-warn" class="banner warn" hidden></p>
-      <ul id="preview-list"></ul>
+      <p id="preview-warn" class="callout callout-warn" hidden></p>
+      <ul id="preview-list" class="site-list"></ul>
     </div>
   </section>
 
-  <section>
-    <h2>Bad night</h2>
-    <p class="hint">Forget the last few hours right now. All history, downloads, recently closed tabs, and search and form history from that time are deleted. Sites you first visited in that time also lose their cookies and site data. Sites you'd visited before then keep theirs, so you stay signed in. This doesn't depend on the settings above, except that sites on the keep list keep their cookies.</p>
-    <div class="row">
-      <span>Forget the last</span>
-      <input type="number" id="badNightHours" min="1" step="1" value="12">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">Bad night</h2>
+      <p class="card-hint">Forget the last few hours right now.</p>
+    </div>
+    <ul class="card-list">
+      <li>All history, downloads, recently closed tabs, and search and form history from that time are deleted.</li>
+      <li>Sites you first visited in that time also lose their cookies and site data.</li>
+      <li>Sites you'd visited before then keep theirs, so you stay signed in.</li>
+    </ul>
+    <div class="callout">
+      <p>This doesn't depend on the settings above, except that sites on the keep list keep their cookies.</p>
+    </div>
+    <div class="field">
+      <label for="badNightHours">Forget the last</label>
+      <input class="input input-number" type="number" id="badNightHours" min="1" step="1" value="12">
       <span>hours</span>
     </div>
     <div class="actions">
-      <button id="badNight" type="button" class="danger">Forget the last 12 hours</button>
-      <span id="badNightStatus" class="muted" aria-live="polite"></span>
+      <button id="badNight" type="button" class="btn btn-danger">Forget the last 12 hours</button>
+      <span id="badNightStatus" class="actions-status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">Search and form history</h2>
+      <p class="card-hint">What you type into search boxes and forms isn't covered. Firefox gives extensions no way to delete what's older than a limit (the Bad night button above can delete the last few hours), so turn it off in Firefox instead. Leave browsing history on, because Nepenthe needs it.</p>
+    </div>
+    <details class="disclosure">
+      <summary>How to stop Firefox saving it</summary>
+      <div class="disclosure-body">
+        <ol>
+          <li>Open Firefox Settings and go to <b>Privacy &amp; Security</b>.</li>
+          <li>Under <b>History</b>, choose <b>Customize history</b>.</li>
+          <li>Click <b>Choose what you want Firefox to remember</b>.</li>
+          <li>Untick <b>Remember search and form history</b>. Leave <b>Remember browsing and download history</b> ticked.</li>
+        </ol>
+      </div>
+    </details>
+    <p class="card-hint">Turning it off doesn't erase what's already saved. This button does, all of it at once. Saved passwords, addresses and cards aren't touched.</p>
+    <div class="actions">
+      <button id="clearForms" type="button" class="btn btn-danger">Clear all saved search and form history</button>
+      <span id="clearFormsStatus" class="actions-status" aria-live="polite"></span>
     </div>
   </section>
 </main>
