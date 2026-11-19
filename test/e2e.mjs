@@ -13,7 +13,6 @@ import assert from "node:assert/strict";
 const FIREFOX = process.env.FIREFOX || "/Applications/Firefox.app/Contents/MacOS/firefox";
 const EXT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UUID = "6e0c0b55-0e0e-4e9e-9a5e-6e9e9e9e0001";
-const BIDI_PORT = 9333;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a);
 
@@ -63,7 +62,7 @@ const prefs = {
 };
 writeFileSync(join(profile, "user.js"),
   Object.entries(prefs).map(([k, v]) => `user_pref(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join("\n"));
-const ff = spawn(FIREFOX, ["--headless", "--no-remote", "--profile", profile, `--remote-debugging-port=${BIDI_PORT}`, "about:blank"],
+const ff = spawn(FIREFOX, ["--headless", "--no-remote", "--profile", profile, "--remote-debugging-port=0", "about:blank"],
   { stdio: ["ignore", "ignore", "pipe"], env: { ...process.env, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: "1" } });
 let stderr = "";
 ff.stderr.on("data", (d) => (stderr += d));
@@ -73,13 +72,22 @@ function cleanup() {
   server.close();
   setTimeout(() => rmSync(profile, { recursive: true, force: true }), 1000);
 }
+// Don't leave a Firefox running if the test is interrupted.
+for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { ff.kill(); process.exit(130); });
 
 // --- BiDi client ------------------------------------------------------------
-let ws;
-for (let i = 0; i < 60 && !ws; i++) {
+// Port 0 lets Firefox pick a free port, which it prints on stderr. A fixed port
+// would connect to any Firefox left over from an interrupted run instead.
+let bidiUrl;
+for (let i = 0; i < 60 && !bidiUrl; i++) {
   await sleep(500);
+  bidiUrl = stderr.match(/WebDriver BiDi listening on (ws:\/\/\S+)/)?.[1];
+}
+let ws;
+for (let i = 0; bidiUrl && i < 20 && !ws; i++) {
+  if (i) await sleep(500);
   ws = await new Promise((resolve) => {
-    const s = new WebSocket(`ws://127.0.0.1:${BIDI_PORT}/session`);
+    const s = new WebSocket(`${bidiUrl}/session`);
     s.onopen = () => resolve(s);
     s.onerror = () => resolve(null);
   });
