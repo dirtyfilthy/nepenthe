@@ -43,7 +43,7 @@ Release builds of Firefox only install signed extensions, so pick one of these:
    security add-generic-password -s nepenthe-amo -a WEB_EXT_API_KEY -w
    security add-generic-password -s nepenthe-amo -a WEB_EXT_API_SECRET -w
    ```
-   This uploads the extension to Mozilla as **unlisted**: it's signed for you but not published on the store. It usually comes back within a few minutes as `web-ext-artifacts/*.xpi`. Open that file in Firefox (File → Open File, or drag it into a window) to install it. To ship an update, bump `version` in `manifest.json` and run `npm run sign` again.
+   This uploads the extension to Mozilla as **unlisted**: it's signed for you but not published on the store. It usually comes back within a few minutes as `web-ext-artifacts/*.xpi`. Run `npm run install-signed` to open the newest one in Firefox, then click **Add** (or open the file yourself with File → Open File). Add a version, e.g. `npm run install-signed -- 0.1.3`, for an older build. To ship an update, bump `version` in `manifest.json` and run `npm run sign` again.
 2. **Firefox Developer Edition, Nightly or ESR.** Set `xpinstall.signatures.required` to `false` in `about:config`, run `npm run package`, then go to `about:addons` → gear menu → Install Add-on From File and pick `nepenthe.zip`.
 3. **Try it out.** Go to `about:debugging#/runtime/this-firefox` → Load Temporary Add-on and pick `manifest.json`. A temporary add-on is removed when Firefox restarts, so this isn't good for real use.
 
@@ -85,6 +85,7 @@ npm run e2e                 # real headless Firefox, ~90s; FIREFOX=/path/to/fire
 npm run release -- 0.1.6    # release a new version to addons.mozilla.org (see Releasing)
 npm run amo-status          # review status of every version on addons.mozilla.org
 npm run sign                # sign an unlisted build on addons.mozilla.org
+npm run install-signed      # install the newest signed build in Firefox
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
 ```
 
