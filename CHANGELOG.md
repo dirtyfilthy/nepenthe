@@ -9,7 +9,12 @@
 - The steps for turning off search and form history are a numbered list behind "How to stop Firefox saving it".
 - Number fields, selects and buttons share one height; checkbox notes sit on their own line under the label.
 - The Save button's text is readable in dark mode, and buttons and fields have a visible border.
-- New icon: a purple tile of dots that thin out toward the bottom, in place of the clock.
+- New icon: a purple tile of dots that thin out toward the bottom, in place of the clock. The settings tab shows it too.
+- **The preview counts only what will be deleted.** With a category unticked, the preview and the "turn on" question no longer count that category's sites, cookies or history pages.
+- Preview and "Delete expired now" say so when they go by the saved settings while the form has unsaved changes.
+- Status under Now updates by itself after an automatic run, without reloading the page.
+- Problems are named in plain words ("local storage", "search and form history") instead of internal names, and a failed save or "Delete expired now" shows a message instead of doing nothing.
+- Wording: "1 day" and "1 cookie" instead of "1 days" and "1 cookies", and times are shown without seconds.
 
 ## 0.1.5 (2026-11-19)
 

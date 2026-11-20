@@ -62,18 +62,33 @@ function markSaved(note = "", fade = false) {
   if (fade) savedNoteTimer = setTimeout(showSaveState, 2000);
 }
 
-const fmt = (t) => new Date(t).toLocaleString();
+const fmt = (t) => new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function describe(counts) {
-  const parts = [
-    [counts.sites, "site", "sites"],
-    [counts.cookies, "cookie", "cookies"],
-    [counts.historyUrls, "history page", "history pages"],
-    [counts.downloads, "download", "downloads"],
-    [counts.closedTabs, "closed tab/window", "closed tabs/windows"],
-  ].map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
-  return parts.join(", ");
+  return [
+    count(counts.sites, "site"),
+    count(counts.cookies, "cookie"),
+    count(counts.historyUrls, "history page"),
+    count(counts.downloads, "download"),
+    count(counts.closedTabs, "closed tab/window", "closed tabs/windows"),
+  ].join(", ");
 }
+
+// The steps a run can report a problem with, in the page's own words.
+const STEP_NAMES = {
+  plan: "working out what has expired",
+  cache: "browser cache",
+  localStorage: "local storage",
+  indexedDB: "IndexedDB",
+  serviceWorkers: "service workers",
+  cookies: "cookies",
+  history: "history",
+  formData: "search and form history",
+  downloads: "download list",
+  closedTabs: "recently closed tabs and windows",
+};
+const describeFailures = (failures) => Object.keys(failures).map((step) => STEP_NAMES[step] || step).join(", ");
 
 async function renderStatus() {
   const [{ settings, lastSweep }, alarm] = await Promise.all([
@@ -84,14 +99,17 @@ async function renderStatus() {
   // One fact per row: [label, value, optional bold lead-in].
   const rows = [
     s.enabled
-      ? ["Automatic deletion", ` Things disappear after ${s.amount} ${s.unit}.`, "On."]
+      ? ["Automatic deletion", ` Things disappear after ${count(s.amount, s.unit.slice(0, -1))}.`, "On."]
       : ["Automatic deletion", " Nothing is deleted automatically.", "Off."],
   ];
-  if (alarm) rows.push(["Next check", `${fmt(alarm.scheduledTime)}, then every ${alarm.periodInMinutes} min`]);
+  if (alarm) {
+    const every = alarm.periodInMinutes === 1 ? "minute" : `${alarm.periodInMinutes} minutes`;
+    rows.push(["Next check", `${fmt(alarm.scheduledTime)}, then every ${every}`]);
+  }
   if (lastSweep) {
     rows.push(["Last run", fmt(lastSweep.at)]);
     if (lastSweep.counts) rows.push(["Deleted", describe(lastSweep.counts)]);
-    if (!lastSweep.ok) rows.push(["Problems with", Object.keys(lastSweep.failures).join(", ")]);
+    if (!lastSweep.ok) rows.push(["Problems with", describeFailures(lastSweep.failures)]);
   }
   $("status").replaceChildren(
     ...rows.flatMap(([label, value, state]) => {
@@ -114,12 +132,17 @@ async function checkPermission() {
   $("perm-warning").hidden = await browser.permissions.contains(ALL_URLS);
 }
 
-async function preview() {
+// Preview and "Delete expired now" go by the saved settings, which isn't what
+// the form shows while it has edits pending.
+const unsavedNote = () => (hasUnsavedChanges() ? "This goes by the saved settings, not your unsaved changes." : "");
+
+async function preview(note = "") {
   const r = await browser.runtime.sendMessage({ type: "preview" });
   $("preview-out").hidden = false;
   $("preview-summary").textContent =
     `Would delete: ${describe(r.counts)}. Everything before ${fmt(r.cutoff)} counts as expired; ` +
-    `${r.recentSiteCount} site${r.recentSiteCount === 1 ? " is" : "s are"} still active.`;
+    `${r.recentSiteCount} site${r.recentSiteCount === 1 ? " is" : "s are"} still active.` +
+    (note && ` ${note}`);
   const warn = $("preview-warn");
   warn.hidden = r.recentSiteCount > 0;
   warn.textContent =
@@ -131,7 +154,7 @@ async function preview() {
       const code = document.createElement("code");
       code.textContent = x.site;
       const counts = document.createElement("span");
-      counts.textContent = `${x.cookies} cookies, ${x.historyUrls} history pages`;
+      counts.textContent = `${count(x.cookies, "cookie")}, ${count(x.historyUrls, "history page")}`;
       li.append(code, counts);
       return li;
     })
@@ -139,8 +162,7 @@ async function preview() {
   return r;
 }
 
-$("form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+async function save() {
   const next = readForm();
   const { settings: prev } = await browser.storage.local.get("settings");
   if (next.enabled && !Settings.normalize(prev).enabled) {
@@ -156,7 +178,12 @@ $("form").addEventListener("submit", async (e) => {
   await browser.storage.local.set({ settings: next });
   fillForm(next);
   markSaved("Saved.", true);
-  renderStatus();
+  return renderStatus();
+}
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  save().catch((err) => alert(`Couldn't save: ${err.message}`));
 });
 
 $("form").addEventListener("input", () => showSaveState());
@@ -167,16 +194,19 @@ window.addEventListener("beforeunload", (e) => {
   if (hasUnsavedChanges()) e.preventDefault();
 });
 
-$("preview").addEventListener("click", () => preview().catch((e) => alert(e.message)));
+$("preview").addEventListener("click", () => preview(unsavedNote()).catch((e) => alert(e.message)));
 
 $("sweep").addEventListener("click", async () => {
   const btn = $("sweep");
-  const r = await preview();
-  if (!confirm(`Delete ${describe(r.counts)} now? This can't be undone.`)) return;
   btn.disabled = true;
   try {
+    const note = unsavedNote();
+    const r = await preview(note);
+    if (!confirm(`Delete ${describe(r.counts)} now? This can't be undone.${note && `\n\n${note}`}`)) return;
     await browser.runtime.sendMessage({ type: "sweep" });
     $("preview-out").hidden = true;
+  } catch (e) {
+    alert(`Couldn't do it: ${e.message}`);
   } finally {
     btn.disabled = false;
     renderStatus();
@@ -223,7 +253,7 @@ $("badNight").addEventListener("click", async () => {
     if (!confirm(msg)) return;
     const result = await browser.runtime.sendMessage({ type: "badNight", since });
     const failed = Object.keys(result.failures);
-    status.textContent = failed.length ? `Done, but with problems: ${failed.join(", ")}.` : "Forgotten.";
+    status.textContent = failed.length ? `Done, but with problems: ${describeFailures(result.failures)}.` : "Forgotten.";
   } catch (e) {
     status.textContent = `Couldn't do it: ${e.message}`;
   } finally {
@@ -243,3 +273,8 @@ browser.storage.local.get("settings").then(({ settings }) => {
 });
 renderStatus();
 checkPermission();
+
+// An automatic run while the page is open: show its result without a reload.
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.lastSweep) renderStatus();
+});

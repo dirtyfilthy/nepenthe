@@ -45,6 +45,9 @@
     return [...ids];
   }
 
+  // Whether a stale site loses anything of its own. History goes by age, not by site.
+  const siteScoped = (settings) => settings.cookies || settings.siteData;
+
   async function plan(api, rawSettings, now = Date.now()) {
     const settings = S.normalize(rawSettings);
     const cutoff = now - S.windowMs(settings);
@@ -93,7 +96,7 @@
     }
 
     const staleCookies = [];
-    if (settings.cookies || settings.siteData) {
+    if (siteScoped(settings)) {
       for (const storeId of await cookieStoreIds(api)) {
         const cookies = await api.cookies.getAll({ storeId, firstPartyDomain: null, partitionKey: {} });
         for (const c of cookies) {
@@ -192,9 +195,12 @@
   }
 
   // A JSON-safe view of a plan for the options page (kept in memory only).
+  // Counts only what the ticked categories will delete, so the preview never
+  // promises more than `execute` does.
   function summarize(p) {
-    const sites = [...p.stale.entries()]
-      .map(([site, e]) => ({ site, cookies: e.cookies.length, historyUrls: e.historyUrls }))
+    const { cookies, history } = p.settings;
+    const sites = !siteScoped(p.settings) ? [] : [...p.stale.entries()]
+      .map(([site, e]) => ({ site, cookies: cookies ? e.cookies.length : 0, historyUrls: history ? e.historyUrls : 0 }))
       .sort((a, b) => a.site.localeCompare(b.site));
     return {
       cutoff: p.cutoff,
@@ -220,7 +226,7 @@
 
   async function execute(api, p) {
     const { settings } = p;
-    const counts = { sites: p.stale.size, cookies: 0, historyUrls: 0, downloads: 0, closedTabs: 0 };
+    const counts = { sites: siteScoped(settings) ? p.stale.size : 0, cookies: 0, historyUrls: 0, downloads: 0, closedTabs: 0 };
     // Only step names and failure counts are recorded: never hostnames or URLs.
     const failures = {};
     const fail = (step) => (failures[step] = (failures[step] || 0) + 1);

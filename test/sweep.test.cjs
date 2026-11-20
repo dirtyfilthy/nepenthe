@@ -178,9 +178,29 @@ test("disabled categories are left alone", async () => {
   });
   const off = { ...settings, history: false, cookies: false, siteData: false, downloads: false, closedTabs: false };
   const p = await Sweep.plan(api, off, NOW);
-  await Sweep.execute(api, p);
+  const r = await Sweep.execute(api, p);
   const c = api.calls;
   assert.equal(c.deleteRange.length + c.cookiesRemoved.length + c.browsingData.length + c.erased.length + c.forgotTabs.length, 0);
+  // The preview and the record of the run say the same: nothing.
+  const nothing = { sites: 0, cookies: 0, historyUrls: 0, downloads: 0, closedTabs: 0 };
+  assert.deepEqual(Sweep.summarize(p).sites, []);
+  assert.deepEqual(Sweep.summarize(p).counts, nothing);
+  assert.deepEqual(r.counts, nothing);
+});
+
+test("the preview counts only what the ticked categories delete", async () => {
+  const api = fakeApi({
+    history: [{ url: "https://old.com/", visits: [NOW - 30 * DAY] }],
+    cookies: [cookie("old.com")],
+  });
+  const historyOnly = Sweep.summarize(await Sweep.plan(api, { ...settings, cookies: false, siteData: false }, NOW));
+  assert.deepEqual(historyOnly.sites, []);
+  assert.equal(historyOnly.counts.sites, 0);
+  assert.equal(historyOnly.counts.historyUrls, 1);
+
+  const siteDataOnly = Sweep.summarize(await Sweep.plan(api, { ...settings, history: false, cookies: false }, NOW));
+  assert.deepEqual(siteDataOnly.sites, [{ site: "old.com", cookies: 0, historyUrls: 0 }]);
+  assert.equal(siteDataOnly.counts.cookies, 0);
 });
 
 test("downloads and closed tabs expire by age; in-progress downloads survive", async () => {
