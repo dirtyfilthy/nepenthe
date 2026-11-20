@@ -45,6 +45,30 @@ export async function listVersions() {
   return versions;
 }
 
+// What anyone can see on the store, asked without API keys:
+// { url, current, versions } with the listing's address, the version it installs
+// and every approved public version. null while the listing itself isn't public.
+export async function publicStore() {
+  const get = async (url) => {
+    const res = await fetch(url);
+    // A listing that isn't public answers 401 without keys; an unknown add-on answers 404.
+    if ([401, 403, 404].includes(res.status)) return null;
+    if (!res.ok) throw new Error(`addons.mozilla.org said HTTP ${res.status}: ${await res.text()}`);
+    return res.json();
+  };
+  const base = `${API}/addons/addon/${encodeURIComponent(addonId())}/`;
+  const addon = await get(base);
+  if (!addon || addon.status !== "public") return null;
+  const versions = [];
+  for (let page = `${base}versions/?page_size=50`; page; ) {
+    const r = await get(page);
+    if (!r) break;
+    versions.push(...r.results.map((v) => v.version));
+    page = r.next;
+  }
+  return { url: addon.url, current: addon.current_version?.version ?? null, versions };
+}
+
 // Versions still waiting for a reviewer, in either channel.
 export const awaitingReview = (versions) => versions.filter((v) => v.status === "unreviewed");
 

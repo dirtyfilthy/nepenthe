@@ -102,6 +102,8 @@ Both `npm run release` and `npm run sign` check addons.mozilla.org first and sto
 
 If the submission fails, fix the problem and run `npm run release -- --submit-only` to retry it. A version number can only be uploaded once, so if `npm run amo-status` shows the failed version arrived anyway, release a newer one instead.
 
+Pushing the tag publishes a GitHub release ([.github/workflows/release.yml](.github/workflows/release.yml)). Its notes are the version's changelog section plus a line saying whether that version is on addons.mozilla.org. A new version starts as "not yet", and the workflow rechecks every day and updates the line once Mozilla approves it. To publish a release for a tag that's already pushed, run the workflow by hand from the Actions tab and give it the tag. `node tools/github-release.mjs v0.1.6 --dry-run` shows the notes without publishing.
+
 The store listing text in `amo-metadata.json` was only used for the first public submission (0.1.4). To change the listing now, edit it on addons.mozilla.org.
 
 Layout:

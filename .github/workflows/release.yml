@@ -1,0 +1,38 @@
+# Publishes a GitHub release when a version tag is pushed, and keeps the line on
+# each release that says whether that version is on addons.mozilla.org.
+# The work is done by tools/github-release.mjs.
+name: GitHub release
+
+on:
+  push:
+    tags: ["v*"]
+  # Reviews on addons.mozilla.org take days or weeks, so recheck every day.
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish, e.g. v0.1.5. Leave empty to only recheck the store line on existing releases."
+        required: false
+
+permissions:
+  contents: write
+
+concurrency: github-release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish the release for the tag
+        if: github.event_name == 'push' || inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: node tools/github-release.mjs "$TAG"
+
+      - name: Recheck the store line on existing releases
+        run: node tools/github-release.mjs --refresh

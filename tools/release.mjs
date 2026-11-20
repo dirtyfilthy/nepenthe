@@ -17,6 +17,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadAmoKeys, MISSING_KEYS_HELP } from "./amo-keys.mjs";
 import { listVersions, awaitingReview, pendingList, PENDING_ADVICE, OVERRIDE_FLAG } from "./amo-api.mjs";
+import { changelogSection } from "./changelog.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_EXT = "web-ext@10.8.0";
@@ -42,16 +43,6 @@ function newer(a, b) {
 
 const currentVersion = () => JSON.parse(read("manifest.json")).version;
 const tagExists = (v) => git("tag", "--list", `v${v}`) !== "";
-
-// The body of a "## <heading>" section of the changelog, or null.
-function changelogSection(text, heading) {
-  const lines = text.split("\n");
-  const start = lines.findIndex((l) => l === `## ${heading}` || l.startsWith(`## ${heading} (`));
-  if (start < 0) return null;
-  let end = lines.findIndex((l, i) => i > start && l.startsWith("## "));
-  if (end < 0) end = lines.length;
-  return lines.slice(start + 1, end).join("\n").trim();
-}
 
 // addons.mozilla.org shows release notes as plain text, so drop Markdown emphasis.
 const plainText = (md) => md.replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
@@ -111,6 +102,7 @@ function finish(version) {
   console.log(`\nSubmitted ${version} to addons.mozilla.org and tagged v${version}.`);
   console.log("Check its review status with `npm run amo-status`. To publish the commit and tag to GitHub, run:");
   console.log(`  git push origin main v${version}`);
+  console.log("Pushing the tag also publishes the GitHub release.");
 }
 
 // --- main ---------------------------------------------------------------
