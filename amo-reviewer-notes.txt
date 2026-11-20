@@ -1,19 +1,19 @@
-Nepenthe deletes browsing data for sites the user hasn't visited within a time limit they choose. It only reads and deletes. It makes no network requests, loads no remote code, uses no eval or innerHTML, and stores nothing but its settings and the counts from the last run. It starts switched off and shows a preview of what the first run would delete before the user confirms.
+Nepenthe deletes browsing data for sites the user hasn't visited within a time limit they choose. It only reads and deletes: no network requests, no remote code, no eval or innerHTML, and it stores only its settings and the counts from the last run. It starts switched off and previews the first run before the user confirms.
 
-The code is plain, unbundled JavaScript. All deletion is in src/sweep.js, which takes the browser API as a parameter (named "api") so it can be unit tested.
+The code is plain, unbundled JavaScript. All deletion is in src/sweep.js, which takes the browser API as a parameter ("api") so it can be unit tested.
 
 Why each permission is needed:
 
-- history: find which sites were visited within the limit (history.search), and delete visits older than it (history.deleteRange).
-- cookies + <all_urls>: list cookies in every cookie store, including containers and partitioned cookies (cookies.getAllCookieStores, cookies.getAll), and remove those of expired sites (cookies.remove). Firefox requires host permission for the cookie's domain to read or remove it, and expired sites can be any site, so this needs <all_urls>. There are no content scripts, and no web requests are read or changed. If the user withdraws the host permission, the settings page says so and offers a button to grant it again.
-- contextualIdentities (new in 0.1.6): list every container's cookie store (contextualIdentities.query, in cookieStoreIds in src/sweep.js). cookies.getAllCookieStores only reports stores that have a tab open, so without this, expired cookies in a container with no open tab were never found. It is only read: no container is created, changed or removed, and nothing about containers is stored.
-- browsingData: delete localStorage, IndexedDB and service workers of expired sites by hostname (browsingData.remove), clear the HTTP cache (browsingData.removeCache; per-host cache clearing silently removes nothing under network partitioning), and delete form history since a time, for the "forget the last N hours" button and the "clear saved search and form history" button (browsingData.removeFormData).
-- downloads: list and remove download-list entries older than the limit (downloads.search, downloads.erase). Downloaded files are never touched.
-- sessions: list and forget recently closed tabs and windows older than the limit (sessions.getRecentlyClosed, sessions.forgetClosedTab, sessions.forgetClosedWindow).
-- tabs: read the URLs of open tabs (tabs.query) so sites that are open count as active and keep their cookies.
-- alarms: run the check every 15 minutes (more often for short limits) and shortly after startup.
+- history: find sites visited within the limit (history.search) and delete older visits (history.deleteRange).
+- cookies + <all_urls>: list cookies in every cookie store, including partitioned ones (cookies.getAll), and remove those of expired sites (cookies.remove). Firefox needs host permission for a cookie's domain to read or remove it, and an expired site can be any site. There are no content scripts, and no web requests are read or changed. If the user withdraws host permission, the settings page says so and offers to grant it again.
+- contextualIdentities (new in 0.1.6): list every container's cookie store (contextualIdentities.query, in cookieStoreIds in src/sweep.js). cookies.getAllCookieStores only reports stores with a tab open, so expired cookies in a container with no open tab were never found. Read only: no container is created, changed or removed.
+- browsingData: delete localStorage, IndexedDB and service workers of expired sites by hostname (browsingData.remove), clear the HTTP cache (browsingData.removeCache; per-host clearing removes nothing under network partitioning), and delete form history since a time for the two "forget" buttons (browsingData.removeFormData).
+- downloads: remove download-list entries older than the limit (downloads.search, downloads.erase). Downloaded files are never touched.
+- sessions: forget recently closed tabs and windows older than the limit (sessions.getRecentlyClosed, forgetClosedTab, forgetClosedWindow).
+- tabs: read open tabs' URLs (tabs.query) so open sites count as active and keep their cookies.
+- alarms: run the check every 15 minutes and shortly after startup.
 - storage: save settings and the last run's counts (storage.local).
 
-Generated file: src/psl-data.js is the Public Suffix List (https://publicsuffix.org/, MPL-2.0), converted by tools/build-psl.mjs into a single string assignment, globalThis.PSL_RULES = "...", with no other code. It's used to group hostnames into sites (src/domain.js). To rebuild it, download https://publicsuffix.org/list/public_suffix_list.dat and run: node tools/build-psl.mjs public_suffix_list.dat. The list changes upstream over time, so a fresh build differs only by rules added or removed since.
+Generated file: src/psl-data.js is the Public Suffix List (https://publicsuffix.org/, MPL-2.0) converted by tools/build-psl.mjs into one string assignment, globalThis.PSL_RULES = "...", with no other code. It groups hostnames into sites (src/domain.js). To rebuild: download https://publicsuffix.org/list/public_suffix_list.dat and run node tools/build-psl.mjs public_suffix_list.dat. The list changes upstream, so a fresh build differs only by rules added or removed since.
 
-The uploaded source is a git archive of the release commit. No build step is needed: the files in the add-on are the files in the repository. Tests: npm test (unit) and npm run e2e (drives a real Firefox).
+The uploaded source is a git archive of the release commit. There is no build step: the files in the add-on are the files in the repository. Tests: npm test (unit) and npm run e2e (real Firefox).
