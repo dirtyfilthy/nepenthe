@@ -87,7 +87,10 @@ npm run amo-status          # review status of every version on addons.mozilla.o
 npm run sign                # sign an unlisted build on addons.mozilla.org
 npm run install-signed      # install the newest signed build in Firefox
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
+npm run wiki                # show what the wiki would gain from this README; add `-- --push` to update it
 ```
+
+The [wiki](https://github.com/dirtyfilthy/nepenthe/wiki) is a copy of this README, one section per page, built by `tools/wiki.mjs`. Edit the README, not the wiki: the next `npm run wiki -- --push` overwrites the wiki's pages.
 
 ### Releasing
 
@@ -106,7 +109,8 @@ Pushing the tag publishes a GitHub release ([.github/workflows/release.yml](.git
 
 The store listing text in `amo-metadata.json` was only used for the first public submission (0.1.4). To change the listing now, edit it on addons.mozilla.org.
 
-Layout:
+### Layout
+
 - `src/sweep.js`: decides what is stale and deletes it.
 - `src/domain.js`: groups hosts into sites.
 - `src/background.js`: scheduling and messages.
