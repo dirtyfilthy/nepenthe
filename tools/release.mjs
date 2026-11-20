@@ -49,6 +49,10 @@ const tagExists = (v) => git("tag", "--list", `v${v}`) !== "";
 // addons.mozilla.org shows release notes as plain text, so drop Markdown emphasis.
 const plainText = (md) => md.replace(/\*\*(.+?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 
+// addons.mozilla.org rejects the whole submission when the notes are longer than this.
+const REVIEWER_NOTES_MAX = 3000;
+const reviewerNotes = () => read("amo-reviewer-notes.txt").trim();
+
 function setVersion(file, version) {
   const text = read(file);
   const next = text.replace(/("version":\s*")[^"]+(")/, `$1${version}$2`);
@@ -67,7 +71,7 @@ function submit(version) {
     metadata.version = {
       ...metadata.version,
       release_notes: { "en-US": plainText(notes) },
-      approval_notes: read("amo-reviewer-notes.txt").trim(),
+      approval_notes: reviewerNotes(),
     };
     const metadataFile = join(dir, "amo-metadata.json");
     writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));
@@ -123,6 +127,11 @@ if (!submitOnly && !parse(version || "")) die("give the new version, e.g. `npm r
 if (!dryRun && !loadAmoKeys()) die(MISSING_KEYS_HELP);
 if (!dryRun && git("rev-parse", "--abbrev-ref", "HEAD") !== "main") die("switch to main first: releases are made from main.");
 if (!dryRun && git("status", "--porcelain")) die("commit or stash your changes first: the release is built from a commit.");
+// Checked before anything is changed, and in a dry run: finding out at the upload
+// leaves a release commit behind with nothing submitted.
+if (reviewerNotes().length > REVIEWER_NOTES_MAX) {
+  die(`amo-reviewer-notes.txt is ${reviewerNotes().length} characters; addons.mozilla.org accepts at most ${REVIEWER_NOTES_MAX}.`);
+}
 if (tagExists(version)) die(`v${version} is already tagged, so it's already released.`);
 await checkReviewQueue();
 
