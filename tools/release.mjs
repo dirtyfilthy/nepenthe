@@ -9,6 +9,8 @@
 //
 // Write what changed under "## Unreleased" in CHANGELOG.md first. That section
 // becomes the version's heading and its addons.mozilla.org release notes.
+// amo-reviewer-notes.txt goes with every submission as the notes for reviewers:
+// keep it in step when permissions or the generated files change.
 // Needs the addons.mozilla.org API keys in the environment or the macOS keychain (see README).
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -60,8 +62,13 @@ function submit(version) {
   const dir = mkdtempSync(join(tmpdir(), "nepenthe-release-"));
   try {
     // Release notes come from the changelog, so they're never stale in amo-metadata.json.
+    // Notes for reviewers come from amo-reviewer-notes.txt, which is easier to edit than a JSON string.
     const metadata = JSON.parse(read("amo-metadata.json"));
-    metadata.version = { ...metadata.version, release_notes: { "en-US": plainText(notes) } };
+    metadata.version = {
+      ...metadata.version,
+      release_notes: { "en-US": plainText(notes) },
+      approval_notes: read("amo-reviewer-notes.txt").trim(),
+    };
     const metadataFile = join(dir, "amo-metadata.json");
     writeFileSync(metadataFile, JSON.stringify(metadata, null, 2));
     // Reviewers need the source of the generated src/psl-data.js, taken from the release commit.
