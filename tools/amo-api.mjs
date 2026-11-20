@@ -69,15 +69,15 @@ export async function publicStore() {
   return { url: addon.url, current: addon.current_version?.version ?? null, versions };
 }
 
-// Versions still waiting for a reviewer, in either channel.
+// Versions still waiting for a reviewer.
 export const awaitingReview = (versions) => versions.filter((v) => v.status === "unreviewed");
 
-// Shared by release and sign: uploading while a version waits for review can
-// cost the add-on its place in the queue, and adds to reviewers' work.
+// Used by release: submitting a listed version while another waits for review
+// can cost the add-on its place in the queue, and adds to reviewers' work.
 export const OVERRIDE_FLAG = "--even-if-pending";
 export const pendingList = (pending) =>
   "addons.mozilla.org still has versions waiting for review:\n" +
   pending.map((v) => `  ${v.version} (${v.channel}, uploaded ${v.created})`).join("\n");
 export const PENDING_ADVICE =
-  "Wait until they're reviewed (`npm run amo-status`), and test locally with `npm start` meanwhile.\n" +
+  "Wait until they're reviewed (`npm run amo-status`), and test with `npm start` or `npm run sign` meanwhile.\n" +
   `For a critical fix that can't wait, add ${OVERRIDE_FLAG}.`;

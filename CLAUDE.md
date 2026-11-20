@@ -28,7 +28,7 @@ npm run install-signed      # opens the newest signed .xpi in Firefox; the user 
 ```
 
 - `npm run sign` is an upload to Mozilla, not a local step. A version number can be uploaded only once, in either channel, so the version in `manifest.json` must be one `npm run amo-status` doesn't list. For a build between releases, set a four-part version such as 0.1.5.1 in `manifest.json`, sign, then put the version back without committing it.
-- It refuses while any version is waiting for review, unless given `--even-if-pending`. Ask before using that flag.
+- Unlisted builds are signed automatically: no reviewer sees them and nothing is published. So signing needs no confirmation and is fine while a listed version waits for review. What's guarded is a listed submission, which only `npm run release` makes.
 - `npm start` and loading `manifest.json` at `about:debugging` need no upload, but neither is a permanent install.
 
 ## Releasing
@@ -39,7 +39,7 @@ Pushing the tag triggers `.github/workflows/release.yml`, which publishes a GitH
 
 Rules that follow from how review works there:
 
-- Reviews are done by people and take days to weeks. Releases are batched: don't upload, listed or unlisted, while `npm run amo-status` shows a version as `unreviewed`.
+- Reviews are done by people and take days to weeks. Releases are batched: don't run `npm run release` while `npm run amo-status` shows a version as `unreviewed`, and ask before adding `--even-if-pending`.
 - Describe user-visible changes under `## Unreleased` in CHANGELOG.md as they're made. That text becomes the store's release notes and the GitHub release notes. Tooling and CI changes don't go there.
 - The other tools sign their requests with API keys from `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` or the macOS keychain (`tools/amo-keys.mjs`).
 
