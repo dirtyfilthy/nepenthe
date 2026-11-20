@@ -168,6 +168,21 @@ try {
     opt = contexts.find((c) => c.url.startsWith(`moz-extension://${UUID}/`))?.context;
   }
   assert.ok(opt, "options page should open on install");
+
+  log("unsaved-changes note");
+  for (let i = 0; i < 50 && !(await evalIn(opt, `document.getElementById("amount").value`)); i++) await sleep(100);
+  // Edit the limit by `delta`, then report the note beside Save and whether leaving the page would be stopped.
+  const editAmount = (delta) => evalIn(opt, `(() => {
+    const amount = document.getElementById("amount");
+    amount.value = Number(amount.value) + ${delta};
+    amount.dispatchEvent(new Event("input", { bubbles: true }));
+    const leave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leave);
+    return { note: document.getElementById("saved").textContent, blocked: leave.defaultPrevented };
+  })()`);
+  assert.deepEqual(await editAmount(1), { note: "Unsaved changes.", blocked: true });
+  assert.deepEqual(await editAmount(-1), { note: "", blocked: false }, "putting the value back clears the note");
+
   await evalIn(opt, `browser.storage.local.set({ settings: { enabled: false, amount: 1, unit: "minutes" } })`);
 
   // Submitting a form makes Firefox save what was typed, like a real search.
