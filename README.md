@@ -112,6 +112,10 @@ Layout:
 - `src/background.js`: scheduling and messages.
 - `options/`: the settings page.
 
+## Thanks
+
+- [Dustpan](https://addons.mozilla.org/firefox/addon/dustpan-cookie-cleaner/) by C4rcer, a cookie cleaner that works when you close a site's last tab. Reading its code showed that Firefox only lists a container's cookie store while one of its tabs is open, which is why Nepenthe now asks for the list of containers itself.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). `src/psl-data.js` is generated from the [Public Suffix List](https://publicsuffix.org/), which is under MPL-2.0.

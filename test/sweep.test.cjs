@@ -23,7 +23,11 @@ function cookie(domain, extra = {}) {
   return { name: "c", domain, path: "/", secure: true, storeId: "firefox-default", firstPartyDomain: "", ...extra };
 }
 
-function fakeApi({ history = [], tabs = [], cookies = [], downloads = [], closed = [] } = {}) {
+// Like Firefox, getAllCookieStores only lists the stores in `openStores` (those with a
+// tab open). `containers` is what contextualIdentities.query returns, or null when
+// containers are switched off, which makes it throw.
+function fakeApi({ history = [], tabs = [], cookies = [], downloads = [], closed = [],
+  openStores = ["firefox-default"], containers = ["firefox-container-1"] } = {}) {
   const calls = { browsingData: [], cacheCleared: [], formData: [], cookiesRemoved: [], deleteRange: [], erased: [], forgotTabs: [], forgotWindows: [] };
   const api = {
     calls,
@@ -36,13 +40,19 @@ function fakeApi({ history = [], tabs = [], cookies = [], downloads = [], closed
     },
     tabs: { async query() { return tabs.map((url) => ({ url })); } },
     cookies: {
-      async getAllCookieStores() { return [{ id: "firefox-default" }, { id: "firefox-container-1" }]; },
+      async getAllCookieStores() { return openStores.map((id) => ({ id })); },
       async getAll({ storeId, firstPartyDomain, partitionKey }) {
         assert.equal(firstPartyDomain, null);
         assert.deepEqual(partitionKey, {});
         return cookies.filter((c) => c.storeId === storeId);
       },
       async remove(d) { calls.cookiesRemoved.push(d); return d; },
+    },
+    contextualIdentities: {
+      async query() {
+        if (!containers) throw new Error("Contextual identities are currently disabled");
+        return containers.map((cookieStoreId) => ({ cookieStoreId }));
+      },
     },
     browsingData: {
       async remove(opts, types) { calls.browsingData.push({ hostnames: opts.hostnames, types }); },
@@ -108,6 +118,36 @@ test("stale sites lose cookies and site data; active sites keep them", async () 
   assert.ok(removed.some((d) => d.url === "http://orphan.org/p" && d.storeId === "firefox-container-1"));
   assert.ok(removed.some((d) => d.partitionKey?.topLevelSite === "https://old.com"));
   assert.ok(!removed.some((d) => d.partitionKey?.topLevelSite === "https://active.com"));
+});
+
+test("cookies are found in every store, whichever stores have a tab open", async () => {
+  const cookies = [
+    cookie("a.com"),
+    cookie("b.com", { storeId: "firefox-container-1" }),
+    cookie("c.com", { storeId: "firefox-container-2" }),
+  ];
+  const stores = async (opts) => {
+    const p = await Sweep.plan(fakeApi({ cookies, ...opts }), settings, NOW);
+    return p.staleCookies.map((c) => c.storeId).sort();
+  };
+  const all = ["firefox-container-1", "firefox-container-2", "firefox-default"];
+  const containers = ["firefox-container-1", "firefox-container-2"];
+  // No container has a tab open.
+  assert.deepEqual(await stores({ containers }), all);
+  // Every tab is in a container, so Firefox doesn't list the default store.
+  assert.deepEqual(await stores({ containers, openStores: ["firefox-container-2"] }), all);
+  // Containers switched off: the default store and the stores with a tab open.
+  assert.deepEqual(await stores({ containers: null, openStores: ["firefox-container-2"] }),
+    ["firefox-container-2", "firefox-default"]);
+
+  // Bad night reads the same stores.
+  const api = fakeApi({
+    containers,
+    history: [{ url: "https://b.com/", visits: [NOW - 1000] }],
+    cookies,
+  });
+  const night = await Sweep.planBadNight(api, settings, NOW - 2000, NOW);
+  assert.deepEqual(night.staleCookies.map((c) => c.storeId), ["firefox-container-1"]);
 });
 
 test("open tabs and the keep list protect a site", async () => {

@@ -221,6 +221,19 @@ try {
   await sleep(70_000);
   await send("browsingContext.close", { context: await visit("fresh") });
 
+  // A container that holds cookies but has no tab open. Firefox leaves such a store
+  // out of getAllCookieStores(), so the sweep has to find it another way.
+  const box = (await evalIn(opt, `browser.contextualIdentities.create({ name: "e2e", color: "blue", icon: "circle" })`)).cookieStoreId;
+  const boxCookie = (name) => evalIn(opt, `browser.cookies.set({ url: ${JSON.stringify(site(name))}, name: "box", value: "1",
+    storeId: ${JSON.stringify(box)}, expirationDate: ${Math.floor(Date.now() / 1000) + 86400} })`);
+  const boxCookies = () => evalIn(opt, `browser.cookies.getAll({ storeId: ${JSON.stringify(box)}, firstPartyDomain: null, partitionKey: {} }).then(c => c.map(x => x.domain))`);
+  await boxCookie("old");
+  await boxCookie("fresh");
+  const listed = await evalIn(opt, `browser.cookies.getAllCookieStores().then(s => s.map(x => x.id))`);
+  log("container", box, "stores Firefox lists:", listed.join(" "));
+  assert.ok(!listed.includes(box), "Firefox only lists cookie stores that have a tab open");
+  assert.deepEqual((await boxCookies()).sort(), ["fresh.test", "old.test"]);
+
   const preview = await evalIn(opt, `browser.runtime.sendMessage({ type: "preview" })`);
   log("preview:", JSON.stringify(preview.sites), JSON.stringify(preview.counts));
   const staleSites = preview.sites.map((s) => s.site);
@@ -241,6 +254,7 @@ try {
   const cookies = await evalIn(opt, `browser.cookies.getAll({ firstPartyDomain: null, partitionKey: {} }).then(c => c.map(x => x.domain))`);
   log("cookies now:", cookies.join(" "));
   assert.deepEqual(cookies.sort(), ["fresh.test", "open.test"]);
+  assert.deepEqual(await boxCookies(), ["fresh.test"], "old.test's cookie in a container with no tab open is gone");
 
   const stored = await evalIn(opt, `browser.storage.local.get()`);
   assert.ok(!JSON.stringify(stored).includes(".test"), "extension storage must not record sites");
@@ -281,6 +295,7 @@ try {
   assert.deepEqual(nightPreview.sites.map((s) => s.site), ["night.test"], "fresh.test was visited before, so it's kept");
   assert.deepEqual(nightPreview.openSites, ["night.test"]);
   await send("browsingContext.close", { context: nightTab });
+  await boxCookie("night");
 
   const nightResult = await evalIn(opt, `browser.runtime.sendMessage({ type: "badNight", since: ${since} })`);
   log("bad night:", JSON.stringify(nightResult));
@@ -293,6 +308,7 @@ try {
   assert.ok(!histAfter.some((u) => u.includes("night.test")), "night.test history gone");
   const cookiesAfter = await evalIn(opt, `browser.cookies.getAll({ firstPartyDomain: null, partitionKey: {} }).then(c => c.map(x => x.domain))`);
   assert.deepEqual(cookiesAfter.sort(), ["fresh.test", "open.test"]);
+  assert.deepEqual(await boxCookies(), ["fresh.test"], "night.test's cookie in the container is gone too");
   let formLeft = 1;
   for (let i = 0; i < 25 && formLeft; i++) { await sleep(200); formLeft = formHistoryCount(); }
   assert.equal(formLeft, 0, "tonight's form history gone");
