@@ -28,6 +28,23 @@
     return D.baseDomain(cookieHost(c));
   }
 
+  // Every cookie store: the default one, each container, and the private one when
+  // Nepenthe is allowed to see it. cookies.getAllCookieStores() alone isn't enough,
+  // because Firefox builds its answer from the open tabs: a container with no tab
+  // open is left out, and so is the default store when every tab is in a container.
+  // Found by reading Dustpan (addons.mozilla.org/firefox/addon/dustpan-cookie-cleaner),
+  // which keeps its own list of stores for the same reason.
+  async function cookieStoreIds(api) {
+    const ids = new Set(["firefox-default"]);
+    try {
+      for (const identity of await api.contextualIdentities.query({})) ids.add(identity.cookieStoreId);
+    } catch {
+      // Containers are switched off in Firefox. Stores with a tab open are still listed below.
+    }
+    for (const store of await api.cookies.getAllCookieStores()) ids.add(store.id);
+    return [...ids];
+  }
+
   async function plan(api, rawSettings, now = Date.now()) {
     const settings = S.normalize(rawSettings);
     const cutoff = now - S.windowMs(settings);
@@ -77,8 +94,8 @@
 
     const staleCookies = [];
     if (settings.cookies || settings.siteData) {
-      for (const store of await api.cookies.getAllCookieStores()) {
-        const cookies = await api.cookies.getAll({ storeId: store.id, firstPartyDomain: null, partitionKey: {} });
+      for (const storeId of await cookieStoreIds(api)) {
+        const cookies = await api.cookies.getAll({ storeId, firstPartyDomain: null, partitionKey: {} });
         for (const c of cookies) {
           const site = cookieSite(c);
           if (!site || recent.has(site)) continue;
@@ -142,8 +159,8 @@
 
     const staleCookies = [];
     if (stale.size) {
-      for (const store of await api.cookies.getAllCookieStores()) {
-        const cookies = await api.cookies.getAll({ storeId: store.id, firstPartyDomain: null, partitionKey: {} });
+      for (const storeId of await cookieStoreIds(api)) {
+        const cookies = await api.cookies.getAll({ storeId, firstPartyDomain: null, partitionKey: {} });
         for (const c of cookies) {
           const e = stale.get(cookieSite(c));
           if (!e) continue;

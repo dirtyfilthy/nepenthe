@@ -13,6 +13,7 @@
   "permissions": [
     "alarms",
     "browsingData",
+    "contextualIdentities",
     "cookies",
     "downloads",
     "history",

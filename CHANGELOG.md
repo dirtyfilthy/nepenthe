@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Cookies in containers you aren't using are now deleted.** Firefox only tells an extension about a container while one of its tabs is open, so a stale site's cookies in a container with no tab open were skipped until you next used that container. Nepenthe now asks Firefox for the full list of containers on every check, which needs the container permission. Found by reading the code of [Dustpan](https://addons.mozilla.org/firefox/addon/dustpan-cookie-cleaner/), a cookie cleaner by C4rcer that works around the same Firefox behaviour. Thank you.
 - **Settings page laid out as cards.** Settings, Now, Bad night, and Search and form history each get their own card, and each card's buttons act only on what is in it. Save is now "Save settings" at the foot of the Settings card.
 - **Unsaved changes are flagged.** Editing a setting shows "Unsaved changes." beside Save settings until you save or put it back, and Firefox asks before closing or reloading the page with edits pending. Before, a change you forgot to save was dropped without a word, including turning deletion off.
 - Status under Now is a row per fact instead of one sentence, and the preview lists one site per row.
