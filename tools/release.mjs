@@ -4,7 +4,7 @@
 //   npm run release -- 0.1.6 --dry-run  only check and show the release notes
 //   npm run release -- --submit-only    resubmit the release commit at HEAD after a failed submission
 //
-// It refuses while any version is still waiting for review on addons.mozilla.org,
+// It refuses while a version is still waiting for review on addons.mozilla.org,
 // unless you add --even-if-pending (for a critical fix).
 //
 // Write what changed under "## Unreleased" in CHANGELOG.md first. That section
