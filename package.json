@@ -14,6 +14,7 @@
     "install-signed": "node tools/install-signed.mjs",
     "lint": "npx web-ext@10.8.0 lint",
     "release": "node tools/release.mjs",
-    "amo-status": "node tools/amo-status.mjs"
+    "amo-status": "node tools/amo-status.mjs",
+    "wiki": "node tools/wiki.mjs"
   }
 }

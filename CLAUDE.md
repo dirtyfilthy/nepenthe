@@ -16,7 +16,10 @@ npm run e2e                 # real headless Firefox, about 90 seconds; FIREFOX=/
 npm run lint                # web-ext lint
 npm start                   # run from source in a fresh Firefox profile, reloads on save
 npm run amo-status          # every version on addons.mozilla.org with its review status
+npm run wiki                # diff of what the GitHub wiki would gain from README.md; `-- --push` updates it
 ```
+
+The GitHub wiki is generated from README.md by `tools/wiki.mjs`, one section per page. Documentation changes go in the README; never edit the wiki's pages directly. `npm run wiki -- --push` publishes, so run it only once the README change is on `main`. A renamed README heading that a page is built from fails `npm test` until `GROUPS` in the tool is updated.
 
 ## Getting a build into the user's own Firefox
 
