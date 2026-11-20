@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nepenthe",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Disappearing history for Firefox: history, cookies, cache and site data for sites you haven't visited in a set time are deleted automatically.",
   "homepage_url": "https://github.com/dirtyfilthy/nepenthe",
   "browser_specific_settings": {
