@@ -7,6 +7,7 @@
 - The steps for turning off search and form history are a numbered list behind "How to stop Firefox saving it".
 - Number fields, selects and buttons share one height; checkbox notes sit on their own line under the label.
 - The Save button's text is readable in dark mode, and buttons and fields have a visible border.
+- New icon: a purple tile of dots that thin out toward the bottom, in place of the clock.
 
 ## 0.1.5 (2026-11-19)
 
