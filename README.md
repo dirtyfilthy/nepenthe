@@ -1,6 +1,8 @@
 # Nepenthe
 
-Disappearing messages for your Firefox history. You pick a time limit, and Nepenthe deletes:
+Disappearing messages for your Firefox history. This guide is also on the [wiki](https://github.com/dirtyfilthy/nepenthe/wiki), one page per section.
+
+You pick a time limit, and Nepenthe deletes:
 
 | What | Rule |
 |---|---|
