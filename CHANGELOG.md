@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Settings page laid out as cards.** Settings, Now, Bad night, and Search and form history each get their own card, and each card's buttons act only on what is in it. Save is now "Save settings" at the foot of the Settings card.
+- **Unsaved changes are flagged.** Editing a setting shows "Unsaved changes." beside Save settings until you save or put it back, and Firefox asks before closing or reloading the page with edits pending. Before, a change you forgot to save was dropped without a word, including turning deletion off.
 - Status under Now is a row per fact instead of one sentence, and the preview lists one site per row.
 - The steps for turning off search and form history are a numbered list behind "How to stop Firefox saving it".
 - Number fields, selects and buttons share one height; checkbox notes sit on their own line under the label.

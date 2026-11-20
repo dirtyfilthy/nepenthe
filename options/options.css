@@ -122,6 +122,7 @@ body {
 /* Actions: buttons, then the status text they report into */
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-12); }
 .actions-status { color: var(--muted); }
+.actions-status-unsaved { color: var(--fg); font-weight: 600; }
 
 /* Check: a checkbox whose label and note hang in their own column */
 .checks { display: grid; gap: var(--space-12); }

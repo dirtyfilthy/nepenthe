@@ -31,6 +31,37 @@ function fillForm(s) {
   for (const f of BOOL_FIELDS) $(f).checked = s[f];
 }
 
+// The form as it was when last loaded or saved, to tell whether it has edits
+// that Save hasn't written yet. Null until the stored settings are filled in.
+let savedForm = null;
+let savedNoteTimer;
+
+function formState() {
+  return JSON.stringify([
+    $("amount").value,
+    $("unit").value,
+    parseKeepSites($("keepSites").value),
+    BOOL_FIELDS.map((f) => $(f).checked),
+  ]);
+}
+
+const hasUnsavedChanges = () => savedForm !== null && formState() !== savedForm;
+
+function showSaveState(note = "") {
+  clearTimeout(savedNoteTimer);
+  const unsaved = hasUnsavedChanges();
+  const el = $("saved");
+  el.textContent = unsaved ? "Unsaved changes." : note;
+  el.classList.toggle("actions-status-unsaved", unsaved);
+}
+
+// Call after the form and storage agree. A note passed with `fade` clears itself.
+function markSaved(note = "", fade = false) {
+  savedForm = formState();
+  showSaveState(note);
+  if (fade) savedNoteTimer = setTimeout(showSaveState, 2000);
+}
+
 const fmt = (t) => new Date(t).toLocaleString();
 
 function describe(counts) {
@@ -118,15 +149,22 @@ $("form").addEventListener("submit", async (e) => {
     const r = await preview();
     if (!confirm(`Turn on Nepenthe? The first run will delete ${describe(r.counts)}. This can't be undone.`)) {
       $("enabled").checked = false;
-      $("saved").textContent = "Saved, but left off.";
+      markSaved("Saved, but left off.");
       return renderStatus();
     }
   }
   await browser.storage.local.set({ settings: next });
   fillForm(next);
-  $("saved").textContent = "Saved.";
-  setTimeout(() => ($("saved").textContent = ""), 2000);
+  markSaved("Saved.", true);
   renderStatus();
+});
+
+$("form").addEventListener("input", () => showSaveState());
+
+// Closing or reloading the tab with edits pending would drop them silently,
+// leaving the old rules in force. Firefox asks before leaving instead.
+window.addEventListener("beforeunload", (e) => {
+  if (hasUnsavedChanges()) e.preventDefault();
 });
 
 $("preview").addEventListener("click", () => preview().catch((e) => alert(e.message)));
@@ -199,6 +237,9 @@ $("grant").addEventListener("click", async () => {
   checkPermission();
 });
 
-browser.storage.local.get("settings").then(({ settings }) => fillForm(Settings.normalize(settings)));
+browser.storage.local.get("settings").then(({ settings }) => {
+  fillForm(Settings.normalize(settings));
+  markSaved();
+});
 renderStatus();
 checkPermission();
