@@ -1,4 +1,5 @@
 {
+  "slug": "nepenthe",
   "categories": { "firefox": ["privacy-security"] },
   "tags": ["privacy", "security"],
   "summary": {

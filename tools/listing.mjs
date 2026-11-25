@@ -107,8 +107,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         console.log("Lines with - are on the store now; lines with + are in amo-metadata.json.");
         console.log("Nothing was changed. Run `npm run listing -- --push` to update the store.");
       } else {
-        await patchAddon(patchBody(changes));
-        console.log(`Updated the listing.  ${live.url}`);
+        // The address comes from the answer, since a new slug changes it.
+        const updated = await patchAddon(patchBody(changes));
+        console.log(`Updated the listing.  ${updated.url ?? live.url}`);
       }
     }
   } catch (e) {
