@@ -16,6 +16,7 @@ npm run e2e                 # real headless Firefox, about 90 seconds; FIREFOX=/
 npm run lint                # web-ext lint
 npm start                   # run from source in a fresh Firefox profile, reloads on save
 npm run amo-status          # every version on addons.mozilla.org with its review status
+npm run listing             # diff of the store listing against amo-metadata.json; `-- --push` updates the store
 npm run wiki                # diff of what the GitHub wiki would gain from README.md; `-- --push` updates it
 ```
 
@@ -45,6 +46,7 @@ Rules that follow from how review works there:
 - Reviews are done by people and take days to weeks. Releases are batched: don't run `npm run release` while `npm run amo-status` shows a version as `unreviewed`, and ask before adding `--even-if-pending`.
 - Describe user-visible changes under `## Unreleased` in CHANGELOG.md as they're made. That text becomes the store's release notes and the GitHub release notes. Tooling and CI changes don't go there.
 - `amo-reviewer-notes.txt` is sent to Mozilla's reviewers with every release. It explains each permission and the generated file, so update it in the same change that adds a permission or changes what a permission is used for.
+- The listing's summary, description, homepage and tags come from `amo-metadata.json` and are pushed with `npm run listing -- --push`, with no new version and no review. That push changes the public store page, so ask before running it.
 - The other tools sign their requests with API keys from `WEB_EXT_API_KEY` / `WEB_EXT_API_SECRET` or the macOS keychain (`tools/amo-keys.mjs`).
 
 ## Architecture
