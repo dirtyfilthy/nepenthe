@@ -86,6 +86,7 @@ npm test                    # unit tests (fake browser API)
 npm run e2e                 # real headless Firefox, ~90s; FIREFOX=/path/to/firefox to override
 npm run release -- 0.1.6    # release a new version to addons.mozilla.org (see Releasing)
 npm run amo-status          # review status of every version on addons.mozilla.org
+npm run listing             # show how the store listing differs from amo-metadata.json; add `-- --push` to update it
 npm run sign                # sign an unlisted build on addons.mozilla.org
 npm run install-signed      # install the newest signed build in Firefox
 npm run build-psl -- public_suffix_list.dat   # refresh src/psl-data.js from a new Public Suffix List
@@ -109,7 +110,7 @@ If the submission fails, fix the problem and run `npm run release -- --submit-on
 
 Pushing the tag publishes a GitHub release ([.github/workflows/release.yml](.github/workflows/release.yml)). Its notes are the version's changelog section plus a line saying whether that version is on addons.mozilla.org. A new version starts as "not yet", and the workflow rechecks every day and updates the line once Mozilla approves it. To publish a release for a tag that's already pushed, run the workflow by hand from the Actions tab and give it the tag. `node tools/github-release.mjs v0.1.6 --dry-run` shows the notes without publishing.
 
-The store listing text in `amo-metadata.json` was only used for the first public submission (0.1.4). To change the listing now, edit it on addons.mozilla.org.
+The store listing's summary, description, homepage and tags live in `amo-metadata.json`. Changing them needs no new version: edit the file, run `npm run listing` to see what differs from the store, then `npm run listing -- --push` to update it. If you edit the listing on addons.mozilla.org instead, copy the change into the file, or the next push puts the old text back.
 
 ### Layout
 

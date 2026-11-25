@@ -1,4 +1,5 @@
-// A small read-only client for the addons.mozilla.org API, for the tools in this folder.
+// A small client for the addons.mozilla.org API, for the tools in this folder.
+// Everything reads, except patchAddon, which edits the store listing.
 // Call loadAmoKeys() from amo-keys.mjs first: requests are signed with
 // WEB_EXT_API_KEY / WEB_EXT_API_SECRET from the environment.
 import { createHmac, randomUUID } from "node:crypto";
@@ -28,6 +29,18 @@ export async function amoGet(path) {
 }
 
 export const getAddon = () => amoGet(`/addons/addon/${encodeURIComponent(addonId())}/`);
+
+// Changes the listing's own fields (summary, description, tags and so on) without
+// uploading a version. fields is the JSON body; fields left out stay as they are.
+export async function patchAddon(fields) {
+  const res = await fetch(`${API}/addons/addon/${encodeURIComponent(addonId())}/`, {
+    method: "PATCH",
+    headers: { Authorization: `JWT ${token()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`addons.mozilla.org said HTTP ${res.status}: ${await res.text()}`);
+  return res.json();
+}
 
 // Every uploaded version, listed and unlisted, newest first:
 // [{ version, channel, status, created }]. status is the file's review status,
