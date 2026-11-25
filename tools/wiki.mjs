@@ -80,6 +80,8 @@ const HOME_INTRO = [
   "Nepenthe is a Firefox extension that gives your browsing history disappearing messages. You pick a time limit, and history, cookies, site data, the downloads list and recently closed tabs are deleted once they're older than it.",
   "",
   "It starts switched off. Before the first run it shows what would be deleted and asks you to confirm. It keeps no record of the sites you visit and sends nothing anywhere.",
+  "",
+  "[Install Nepenthe from addons.mozilla.org](https://addons.mozilla.org/firefox/addon/nepenthe/).",
 ].join("\n");
 
 // Places where the README names another section in plain words.
