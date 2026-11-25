@@ -1,6 +1,6 @@
 # Nepenthe
 
-Disappearing messages for your Firefox history. This guide is also on the [wiki](https://github.com/dirtyfilthy/nepenthe/wiki), one page per section.
+Disappearing messages for your Firefox history. [Install Nepenthe from addons.mozilla.org](https://addons.mozilla.org/firefox/addon/nepenthe/). This guide is also on the [wiki](https://github.com/dirtyfilthy/nepenthe/wiki), one page per section.
 
 You pick a time limit, and Nepenthe deletes:
 
@@ -32,7 +32,9 @@ Sites you'd visited before then keep their cookies, so you stay signed in, but t
 
 ## Install
 
-Release builds of Firefox only install signed extensions, so pick one of these:
+The easy way is the store: open <https://addons.mozilla.org/firefox/addon/nepenthe/> in Firefox and click **Add to Firefox**. Updates then arrive on their own.
+
+To run it from this source instead: release builds of Firefox only install signed extensions, so pick one of these:
 
 1. **Sign it yourself (permanent, any Firefox).** Create API keys at <https://addons.mozilla.org/developers/addon/api/key/> (sign in with a Mozilla account). In a terminal in this folder, run:
    ```bash
